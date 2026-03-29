@@ -107,6 +107,8 @@ Porta doesn't stream pixels or run your workspace in the cloud. It relays struct
 
 This project is based on [porta](https://github.com/L1M80/porta) by [L1M80](https://github.com/L1M80), licensed under the [MIT License](LICENSE).
 
+Thanks to the [LINUX DO](https://linux.do/) community for support and feedback.
+
 ## License
 
 [MIT](LICENSE)

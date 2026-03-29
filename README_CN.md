@@ -104,6 +104,8 @@ Porta 不传输屏幕画面，也不把工作区放到云端。它通过 Antigra
 
 本项目基于 [L1M80](https://github.com/L1M80) 的 [porta](https://github.com/L1M80/porta)，使用 [MIT 协议](LICENSE) 授权。
 
+感谢 [LINUX DO](https://linux.do/) 社区的支持与反馈。
+
 ## 许可证
 
 [MIT](LICENSE)
