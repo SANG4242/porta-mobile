@@ -77,7 +77,7 @@ Porta doesn't stream pixels or run your workspace in the cloud. It relays struct
 
 - **Near-zero bandwidth**: JSON messages, not video frames
 - **Real-time streaming**: WebSocket push, no polling
-- **Installable PWA**: add to home screen for a native app feel
+- **Installable PWA**: add to home screen for a native app feel (see [PWA setup](docs/pwa.md) — a one-time browser flag is needed for HTTP/LAN)
 - **Full privacy**: your code and conversations never leave your machine
 
 ## Configuration Reference

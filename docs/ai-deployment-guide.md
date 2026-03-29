@@ -110,6 +110,30 @@ The web UI is configured with `host: true` in `vite.config.ts`, so it's accessib
 
 ---
 
+## Install as App (PWA, Recommended)
+
+For the best mobile experience, install Porta as a PWA — it opens in its own window without browser UI, like a native app.
+
+### Browser flag for HTTP access
+
+PWA installation normally requires HTTPS. Since Porta runs over plain HTTP on a LAN/VPN IP, you need a one-time browser flag:
+
+**Chrome** (Android / Desktop):
+1. Go to `chrome://flags/#unsafely-treat-insecure-origin-as-secure`
+2. Enter the Porta URL (e.g. `http://192.168.1.23:5173`) in the text box
+3. Set to **Enabled** → tap **Relaunch**
+
+**Edge** (Android / Desktop):
+1. Go to `edge://flags/#unsafely-treat-insecure-origin-as-secure`
+2. Enter the Porta URL (e.g. `http://192.168.1.23:5173`) in the text box
+3. Set to **Enabled** → tap **Restart**
+
+After relaunching, visit Porta again. The browser menu will now show **Install app** / **Add to Home screen**.
+
+> **Note:** On iOS Safari, use Share → **Add to Home Screen** directly — no flag needed.
+
+---
+
 ## Step 4: Background Startup (Windows, Optional)
 
 For headless operation (no terminal window), the project includes two scripts:

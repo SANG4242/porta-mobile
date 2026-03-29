@@ -75,7 +75,7 @@ Porta 不传输屏幕画面，也不把工作区放到云端。它通过 Antigra
 
 - **带宽极低**：传输的是 JSON 消息，不是视频流
 - **实时推送**：WebSocket 推送，无需轮询
-- **可安装为 PWA**：添加到手机主屏幕，体验接近原生应用
+- **可安装为 PWA**：添加到手机主屏幕，体验接近原生应用（参见 [PWA 安装指南](docs/pwa.md)，局域网 HTTP 访问需一次性配置浏览器 flag）
 - **完全本地**：代码和对话数据不离开你的电脑
 
 ## 配置参考
@@ -94,6 +94,11 @@ Porta 不传输屏幕画面，也不把工作区放到云端。它通过 Antigra
 - **仅支持对话** —— 不能编辑代码或使用终端，这些请在本地编辑器中操作
 - **单用户** —— 连接一个 Antigravity 实例
 - **同侧运行** —— Proxy 必须和 Antigravity 在同一环境中运行（不能一个在 WSL2、一个在 Windows 宿主）
+
+## 文档
+
+- [PWA 安装指南](docs/pwa.md)（推荐 Chrome / Edge 安装为应用）
+- [AI 部署指南](docs/ai-deployment-guide.md) / [AI 部署指南（中文）](docs/ai-deployment-guide_cn.md)
 
 ## 致谢
 

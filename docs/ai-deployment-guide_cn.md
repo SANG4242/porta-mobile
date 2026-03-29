@@ -107,6 +107,30 @@ pnpm dev
 
 ---
 
+## 安装为应用（PWA，推荐）
+
+为了获得最佳手机体验，建议将 Porta 安装为 PWA —— 它会以独立窗口运行，没有浏览器地址栏和工具栏，体验接近原生应用。
+
+### 浏览器 flag 配置（HTTP 局域网访问必需）
+
+PWA 安装通常要求 HTTPS。由于 Porta 在局域网/VPN 下使用 HTTP，需要一次性配置浏览器 flag：
+
+**Chrome**（Android / 桌面端）：
+1. 地址栏输入 `chrome://flags/#unsafely-treat-insecure-origin-as-secure`
+2. 在文本框中填入 Porta 的访问地址（如 `http://192.168.1.23:5173`）
+3. 将开关设为 **Enabled** → 点击底部 **Relaunch** 重启浏览器
+
+**Edge**（Android / 桌面端）：
+1. 地址栏输入 `edge://flags/#unsafely-treat-insecure-origin-as-secure`
+2. 在文本框中填入 Porta 的访问地址（如 `http://192.168.1.23:5173`）
+3. 将开关设为 **Enabled** → 点击底部 **重启** 按钮
+
+重启后重新访问 Porta，浏览器菜单中即可看到 **安装应用** / **添加到主屏幕** 选项。
+
+> **提示：** iOS Safari 无需此配置，直接使用 分享 → **添加到主屏幕** 即可。
+
+---
+
 ## 第四步：后台启动（Windows，可选）
 
 项目附带两个脚本用于无窗口运行：
