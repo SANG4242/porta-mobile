@@ -194,6 +194,8 @@ function SystemMessage({
 interface MediaItem {
   mimeType?: string;
   inlineData?: string;
+  thumbnail?: string;
+  uri?: string;
   payload?: { case?: string; value?: string };
 }
 
@@ -210,20 +212,37 @@ function MediaThumbs({
       {media.map((m, i) => {
         const item = m as MediaItem;
         const mimeType = item.mimeType ?? "image/png";
-        const inlineData =
-          item.inlineData ??
-          (item.payload?.case === "inlineData"
+
+        // Priority: inlineData (full res base64) > proxy file endpoint (uri) > thumbnail > payload
+        const hasInline = item.inlineData && item.inlineData.length > 0;
+        const hasThumbnail = item.thumbnail && item.thumbnail.length > 0;
+        const payloadData =
+          item.payload?.case === "inlineData"
             ? item.payload.value
-            : undefined);
-        if (!inlineData) return null;
-        const src = `data:${mimeType};base64,${inlineData}`;
+            : undefined;
+
+        let src: string | undefined;
+        if (hasInline) {
+          src = `data:${mimeType};base64,${item.inlineData}`;
+        } else if (item.uri) {
+          // IDE-uploaded images: inlineData is empty but uri has the local path.
+          // Use the proxy /api/files endpoint to serve the full-res image.
+          const apiBase = ((import.meta as unknown) as Record<string, Record<string, string>>).env?.VITE_API_BASE ?? "";
+          src = `${apiBase}/api/files?path=${encodeURIComponent(item.uri)}`;
+        } else if (hasThumbnail) {
+          src = `data:${mimeType};base64,${item.thumbnail}`;
+        } else if (payloadData) {
+          src = `data:${mimeType};base64,${payloadData}`;
+        }
+
+        if (!src) return null;
         return (
           <img
             key={i}
             src={src}
             alt="attachment"
             className="message-media-thumb"
-            onClick={() => onImageClick?.(src)}
+            onClick={() => onImageClick?.(src!)}
           />
         );
       })}
@@ -404,6 +423,20 @@ export function ChatPanel({
     onSidebarRefresh,
     isConversationRunning,
   );
+
+  // Auto-sync when AI goes idle: catch any tail steps the WS missed
+  const prevWsRunningRef = useRef(wsRunning);
+  useEffect(() => {
+    if (prevWsRunningRef.current && !wsRunning) {
+      // wsRunning transitioned true → false: AI just finished.
+      // The WS may have entered IDLE before the final trailing steps were
+      // pushed. Do a soft HTTP sync now — the same fetch that happens when
+      // switching conversations and back — so the last message appears
+      // immediately without needing manual navigation.
+      refresh();
+    }
+    prevWsRunningRef.current = wsRunning;
+  }, [wsRunning, refresh]);
 
   // Soft re-fetch when refreshKey changes (e.g. after send)
   const prevKeyRef = useRef(refreshKey);

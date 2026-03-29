@@ -1,217 +1,111 @@
-# Porta
+# Porta Mobile
 
-[![CI](https://github.com/L1M80/porta/actions/workflows/ci.yml/badge.svg)](https://github.com/L1M80/porta/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-![Version](https://img.shields.io/badge/version-0.1.0-green)
+**English** | [中文](README_CN.md)
 
-Remote web interface for [Antigravity](https://antigravity.google/) Agent Manager.  
-Access your local Antigravity sessions from your phone, tablet, or any remote browser through a lightweight LSP bridge.
+Enhanced mobile interface for [Antigravity](https://antigravity.google/) — access your local Antigravity sessions from your phone or tablet through a lightweight LSP bridge.
 
-Porta is a two-part system: a **proxy** that bridges your local Antigravity Language Server to the network, and a **web UI** (installable PWA) that gives you a mobile-friendly chat interface.
+Based on [porta](https://github.com/L1M80/porta) by L1M80 (MIT License), with improvements focused on real-world usability, mobile experience, and CJK language support.
 
-<p align="center">
-  <img src="docs/screenshot.png" alt="Porta — desktop and mobile" width="720">
-</p>
+## What's Different from Upstream
 
-<p align="center">
-  <img src="docs/demo.gif" alt="Porta mobile demo" width="360">
-</p>
+This fork includes the following improvements over the [original porta](https://github.com/L1M80/porta):
 
-## Quick start
+| Feature | Description |
+|---|---|
+| **WebSocket Real-time Streaming** | Agent responses now stream in real-time via WebSocket, instead of requiring manual refresh |
+| **Command Approval Fix** | Fixed RPC field mapping errors that broke the approve/reject flow for agent-proposed commands |
+| **Image Display** | Images uploaded from the IDE are now visible in the mobile interface (via proxy file endpoint) |
+| **Model Selector Sorting** | Model list is now sorted by label for consistent ordering |
+| **New Conversation Sync** | Conversations created in Porta are synced back to the IDE via `SendActionToChatPanel` RPC |
+| **CJK Workspace Names** | Fixed garbled Chinese/Japanese/Korean characters in workspace names (URI percent-encoding decode) |
+| **Font Size Control** | Adjustable font size from the sidebar, using `rem`-based scaling for cross-browser compatibility |
+| **LAN-Ready by Default** | Vite dev server binds to all interfaces (`host: true`), no extra flags needed for LAN access |
+| **Background Startup** | Included scripts for silent background startup and Windows auto-start at boot |
 
-**Prerequisites**: **[Node.js](https://nodejs.org/) ≥ 22**, **[pnpm](https://pnpm.io/) ≥ 10**, and a running
-[Antigravity](https://antigravity.google/) instance.
+## Quick Start
 
-> **Warning:** Porta is a bridge to Antigravity. If Antigravity is not
-> running, the proxy will start but cannot connect to any session.
+**Prerequisites**: [Node.js](https://nodejs.org/) ≥ 22, [pnpm](https://pnpm.io/) ≥ 10, and a running [Antigravity](https://antigravity.google/) instance.
+
+> **Note:** Porta is a bridge to Antigravity. If Antigravity is not running, the proxy will start but cannot connect to any session.
 
 ```bash
-git clone https://github.com/L1M80/porta.git
-cd porta
+git clone https://github.com/SANG4242/porta-mobile.git
+cd porta-mobile
 pnpm install
-cp .env.example .env   # edit if needed — see comments inside
+cp .env.example .env   # edit to match your setup
 pnpm dev               # proxy (:3170) + web (:5173)
 ```
 
 Open `http://localhost:5173` in your browser.
 
-### LAN access
+### LAN / Remote Access
 
-To access from another device on your home network:
+To access from your phone or another device on your network, edit `.env`:
 
 ```bash
-# Set PORTA_HOST to this machine's LAN IP in .env
+# Set to this machine's LAN IP (or ZeroTier/Tailscale IP)
 PORTA_HOST=192.168.1.23
+
+# Allow the web UI to connect WebSocket directly to the proxy
+VITE_WS_BASE=ws://192.168.1.23:3170
+
+# Allow CORS from the web UI origin
+PORTA_CORS_ORIGINS=http://192.168.1.23:5173
 ```
 
-Devices on the same network can reach the proxy at `http://192.168.1.23:3170`.  
-Wildcard binds (`0.0.0.0`, `::`) and public IPs are rejected at startup for safety.
+Then open `http://192.168.1.23:5173` on your phone.
 
-> **Note:** to also access the Vite dev UI from LAN, start it with `--host`:
->
-> ```bash
-> pnpm --filter @porta/web dev -- --host
-> ```
+> **Tip:** For access outside your home network, you can use [ZeroTier](https://www.zerotier.com/) or [Tailscale](https://tailscale.com/) to create a virtual LAN between your devices. Set `PORTA_HOST` to the virtual IP assigned by your VPN.
 
-## Why Porta?
+### Background Startup (Windows)
 
-There are several ways to access a local development environment
-remotely. Here's how Porta compares:
+To run Porta silently in the background:
 
-| Approach                              | Data sent           | Bandwidth      | Latency                   | Mobile UX                    | Self-hosted |
-| ------------------------------------- | ------------------- | -------------- | ------------------------- | ---------------------------- | ----------- |
-| **Screen sharing** (VNC, RDP, Parsec) | Pixel stream        | High           | Noticeable                | Poor: tiny text, no touch UX | ✅          |
-| **SSH + port forwarding**             | Raw TCP             | Low            | Low                       | No UI: terminal only         | ✅          |
-| **Cloud IDE** (Codespaces, Gitpod)    | Full workspace      | N/A (cloud)    | Varies                    | Usable but heavy             | ❌          |
-| **Porta**                             | Structured LSP data | **Negligible** | **Real-time** (WebSocket) | **Native PWA**               | ✅          |
+1. Edit `start_porta.bat` — update the paths to match your setup
+2. Double-click `start_porta.vbs` to start without a visible window
+3. (Optional) Copy a shortcut to `start_porta.vbs` into `shell:startup` for auto-start at boot
 
-Porta doesn't stream pixels or run your workspace in the cloud. It
-relays structured conversation data through the Antigravity Language
-Server Protocol, so you get:
+To stop: open Task Manager, find `node.exe` processes, and end them.
+
+## How It Works
+
+```
+Phone Browser → Porta Web UI (:5173) → Porta Proxy (:3170) → Antigravity Language Server
+```
+
+Porta doesn't stream pixels or run your workspace in the cloud. It relays structured conversation data through the Antigravity Language Server Protocol:
 
 - **Near-zero bandwidth**: JSON messages, not video frames
-- **Real-time streaming**: WebSocket push, no polling lag
-- **Native mobile experience**: [installable PWA](docs/pwa.md) with touch-optimized UI
+- **Real-time streaming**: WebSocket push, no polling
+- **Installable PWA**: add to home screen for a native app feel
 - **Full privacy**: your code and conversations never leave your machine
-- **No vendor lock-in**: self-hosted, MIT-licensed, works with any Antigravity installation
+
+## Configuration Reference
+
+| Variable | Default | Description |
+|---|---|---|
+| `PORTA_HOST` | `127.0.0.1` | IP to bind the proxy. Use a LAN/VPN IP for remote access |
+| `PORTA_PORT` | `3170` | Proxy port |
+| `PORTA_CORS_ORIGINS` | *(empty)* | Comma-separated allowed origins for CORS |
+| `VITE_WS_BASE` | *(empty)* | WebSocket URL for direct proxy connection (e.g. `ws://192.168.1.23:3170`). Required when accessing from a remote device |
+| `VITE_API_BASE` | *(empty)* | API URL for production builds (Cloudflare deployment) |
 
 ## Limitations
 
-Porta is a **chat interface**, not a full remote IDE. These
-constraints are inherent to its LSP-bridge architecture:
+- **Antigravity must be running** — Porta is a bridge, not a standalone tool
+- **Chat only** — no code editing or terminal access; use your local editor for that
+- **Single user** — connects to one Antigravity instance
+- **Same-side requirement** — the proxy must run on the same machine (or same environment, e.g. not WSL2 vs Windows host) as Antigravity
 
-- **Antigravity must be running**: Porta is a bridge, not a
-  standalone tool. No Antigravity instance → no data.
-- **Bounded by Antigravity**: Porta can only expose what the
-  Antigravity Language Server provides. If Antigravity doesn't support
-  a feature, Porta can't offer it either.
-- **No code editing or terminal**: Porta relays conversation-level
-  data only. Use your local editor or SSH for file operations.
-- **Single user**: The proxy connects to one local Antigravity
-  Language Server. There is no multi-user or multi-tenant model.
+## Documentation
 
-### Platform support
+- [中文文档 (Chinese README)](README_CN.md)
+- [AI Deployment Guide](docs/ai-deployment-guide.md) / [AI 部署指南](docs/ai-deployment-guide_cn.md)
+- [PWA Installation](docs/pwa.md)
 
-| Tier       | Platform    | Status                                               |
-| ---------- | ----------- | ---------------------------------------------------- |
-| **Tier 1** | Linux (x64) | Developed and tested on real hardware                |
-| **Tier 2** | Windows     | Tested on real hardware; less extensively than Linux |
-| **Tier 3** | macOS       | CI passes; no real-hardware testing by maintainers   |
+## Credits
 
-> Porta's proxy must run on the **same side** as Antigravity. If
-> Antigravity runs on your Windows host, run Porta from PowerShell / cmd,
-> **not** from inside WSL2. Conversely, if Antigravity runs inside WSL2,
-> run Porta from WSL2, **not** from Windows. The two environments cannot
-> see each other's processes.
-
-## Remote access with Cloudflare
-
-```mermaid
-flowchart LR
-  Browser
-
-  subgraph CF ["Cloudflare (optional)"]
-    Pages["Pages(static SPA)"]
-    Tunnel
-    ZT["Zero Trust"]
-  end
-
-  subgraph Local ["Your machine"]
-    Proxy["Proxy(:3170)"]
-    LS["Antigravity LS"]
-  end
-
-  Browser -- HTTPS --> Pages --> ZT --> Tunnel --> Proxy --> LS
-  Browser -. local .-> Proxy
-```
-
-- **Local-only mode** (Quick start above): Browser → Proxy → LS. No cloud services needed.
-- **Remote mode**: Cloudflare Pages + Tunnel + Zero Trust for secure remote access without exposing your network.
-
-Cloudflare can be used in two different ways:
-
-### Option A: Quick Tunnel (temporary testing)
-
-If you only want to try Porta remotely and do not need a stable hostname, use a
-Cloudflare Quick Tunnel.
-
-- No custom domain required
-- Best for demos and short-lived testing
-- Not recommended for ongoing use: the hostname is temporary, and Cloudflare documents Quick Tunnels as testing-only infrastructure
-
-To avoid stale copy-pasted instructions, follow Cloudflare's current docs:
-
-- [Quick Tunnels](https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/do-more-with-tunnels/trycloudflare/)
-- [Cloudflare Tunnel setup](https://developers.cloudflare.com/tunnel/setup/)
-
-Use a named tunnel instead if you want a stable `VITE_API_BASE`, a fixed Cloudflare
-Pages deployment, or long-lived remote access.
-
-### Option B: Named tunnel + Pages (recommended for regular remote use)
-
-This is the stable pattern for ongoing remote access. It requires:
-
-- A **Cloudflare** account
-- **Cloudflare Tunnel** (`cloudflared`) installed and authenticated
-- A **Cloudflare Pages** project (for hosting the static SPA)
-- A domain managed by **Cloudflare** for the tunnel hostname
-- Optionally, **Cloudflare Zero Trust** for authentication
-
-### 1. Configure `.env`
-
-Set the proxy runtime and Cloudflare-related variables in `.env`:
-
-```bash
-# .env
-PORTA_CORS_ORIGINS=https://<YOUR_PAGES_DOMAIN>
-PORTA_TUNNEL_NAME=<YOUR_TUNNEL_NAME>
-PORTA_CF_PROJECT=<YOUR_PROJECT_NAME>
-```
-
-### 2. Create the named tunnel
-
-Point the tunnel at your local proxy:
-
-```bash
-cloudflared tunnel create <YOUR_TUNNEL_NAME>
-cloudflared tunnel route dns <YOUR_TUNNEL_NAME> <YOUR_API_SUBDOMAIN>
-```
-
-### 3. Create `.env.production`
-
-Create `.env.production` in the repo root for the web build:
-
-```bash
-# .env.production
-VITE_API_BASE=https://<YOUR_API_SUBDOMAIN>
-```
-
-### 4. Build and deploy the SPA
-
-```bash
-pnpm deploy
-```
-
-This uses `PORTA_CF_PROJECT` from `.env`. If you prefer, you can run the
-equivalent `wrangler pages deploy` command manually.
-
-### 5. Start the proxy + named tunnel
-
-```bash
-pnpm dev:cloud
-```
-
-This reads `PORTA_TUNNEL_NAME` from `.env` and starts the proxy and
-`cloudflared tunnel run` together.
-
-## Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for development workflow, branch
-strategy, and PR guidelines.
-
-## Security
-
-To report a vulnerability, see [SECURITY.md](SECURITY.md).
+This project is based on [porta](https://github.com/L1M80/porta) by [L1M80](https://github.com/L1M80), licensed under the [MIT License](LICENSE).
 
 ## License
 

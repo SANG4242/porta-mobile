@@ -165,6 +165,7 @@ function ChatView() {
       trajectoryId: string,
       stepIndex: number,
       approved: boolean,
+      commandLine?: string,
     ) => {
       if (!activeId) return;
       try {
@@ -173,6 +174,7 @@ function ChatView() {
           trajectoryId,
           stepIndex,
           approved,
+          commandLine,
         );
         triggerSoftRefresh();
         refresh();

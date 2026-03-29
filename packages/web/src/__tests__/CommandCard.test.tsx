@@ -62,7 +62,7 @@ describe("CommandCard", () => {
 
     await userEvent.click(screen.getByText("Approve"));
 
-    expect(onAction).toHaveBeenCalledWith("traj-1", 7, true);
+    expect(onAction).toHaveBeenCalledWith("traj-1", 7, true, "npm install");
     expect(screen.queryByText("Approve")).not.toBeInTheDocument();
   });
 
@@ -87,7 +87,7 @@ describe("CommandCard", () => {
 
     await userEvent.click(screen.getByText("Reject"));
 
-    expect(onAction).toHaveBeenCalledWith("traj-1", 7, false);
+    expect(onAction).toHaveBeenCalledWith("traj-1", 7, false, "npm install");
     expect(screen.getByText("Approve")).toBeInTheDocument();
     expect(screen.getByText("Reject")).toBeInTheDocument();
   });

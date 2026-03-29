@@ -152,6 +152,7 @@ interface CommandCardProps {
     trajectoryId: string,
     stepIndex: number,
     approved: boolean,
+    commandLine?: string,
   ) => Promise<void>;
 }
 
@@ -173,6 +174,7 @@ export function CommandCard({ step, onCommandAction }: CommandCardProps) {
   const trajectoryId =
     step.metadata?.sourceTrajectoryStepInfo?.trajectoryId ?? "";
   const stepIndex = step.metadata?.sourceTrajectoryStepInfo?.stepIndex ?? 0;
+  const proposedCmd = cmd.proposedCommandLine ?? cmd.commandLine ?? cmd.command ?? "";
 
   const statusClass = isWaiting
     ? "cmd-wait"
@@ -186,7 +188,7 @@ export function CommandCard({ step, onCommandAction }: CommandCardProps) {
     if (!onCommandAction) return;
     setResponded(true);
     try {
-      await onCommandAction(trajectoryId, stepIndex, approved);
+      await onCommandAction(trajectoryId, stepIndex, approved, proposedCmd);
     } catch {
       // Request failed — restore buttons so user can retry
       setResponded(false);

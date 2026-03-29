@@ -3,7 +3,12 @@ import { api } from "../api/client";
 
 /** Extract a short slug from a workspace URI: file:///home/user/work/porta → porta */
 function slugFromUri(uri: string): string {
-  return uri.replace("file://", "").split("/").pop() ?? uri;
+  const raw = uri.replace("file://", "").split("/").pop() ?? uri;
+  try {
+    return decodeURIComponent(raw);
+  } catch {
+    return raw;
+  }
 }
 
 /** Resolve a slug back to a full workspace URI using the workspace list. */
@@ -49,10 +54,16 @@ export function useWorkspaces(
       const ws = conv.summary.workspaces?.[0];
       if (!ws?.workspaceFolderAbsoluteUri) continue;
       const uri = ws.workspaceFolderAbsoluteUri;
-      const name =
+      const rawName =
         ws.repository?.computedName?.split("/").pop() ??
         uri.replace("file://", "").split("/").pop() ??
         uri;
+      let name: string;
+      try {
+        name = decodeURIComponent(rawName);
+      } catch {
+        name = rawName;
+      }
       fromConvs.set(uri, name);
     }
 
@@ -60,12 +71,16 @@ export function useWorkspaces(
     api
       .getWorkspaces()
       .then((data) => {
-        const fromApi = (data.workspaceInfos ?? []).map((w) => ({
-          uri: w.workspaceUri,
-          name:
-            w.workspaceUri.replace("file://", "").split("/").pop() ??
-            w.workspaceUri,
-        }));
+        const fromApi = (data.workspaceInfos ?? []).map((w) => {
+          const rawApiName = w.workspaceUri.replace("file://", "").split("/").pop() ?? w.workspaceUri;
+          let apiName: string;
+          try {
+            apiName = decodeURIComponent(rawApiName);
+          } catch {
+            apiName = rawApiName;
+          }
+          return { uri: w.workspaceUri, name: apiName };
+        });
         const merged = new Map<string, string>();
         for (const w of fromApi) merged.set(w.uri, w.name);
         for (const [uri, name] of fromConvs) {

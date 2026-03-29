@@ -13,6 +13,7 @@
     "test:e2e": "vitest --config vitest.e2e.config.ts --run"
   },
   "dependencies": {
+    "katex": "^0.16.38",
     "marked": "^17.0.3",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
@@ -27,6 +28,7 @@
     "@types/node": "^24.10.1",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-basic-ssl": "^2.2.0",
     "@vitejs/plugin-react-swc": "^4.2.2",
     "eslint": "^9.39.1",
     "eslint-plugin-react-hooks": "^7.0.1",

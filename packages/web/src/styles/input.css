@@ -67,7 +67,7 @@
   outline: none;
   color: var(--text-primary);
   font-family: var(--font-sans);
-  font-size: 14px;
+  font-size: 1rem;
   line-height: 1.5;
   resize: none;
   max-height: 200px;
@@ -99,7 +99,7 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  font-size: 12px;
+  font-size: 0.857rem;
   transition:
     background var(--transition-fast),
     opacity var(--transition-fast);
@@ -126,7 +126,7 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  font-size: 9px;
+  font-size: 0.643rem;
   transition:
     background var(--transition-fast),
     border-color var(--transition-fast);
@@ -173,7 +173,7 @@
   margin: 0 auto 6px;
   width: 100%;
   padding: 8px 14px;
-  font-size: 12px;
+  font-size: 0.857rem;
   color: rgb(var(--c-error));
   background: rgb(var(--c-error) / 0.08);
   border: 1px solid rgb(var(--c-error) / 0.2);
@@ -230,7 +230,7 @@
   border-radius: 50%;
   background: rgba(0, 0, 0, 0.6);
   color: var(--text-on-solid);
-  font-size: 12px;
+  font-size: 0.857rem;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -254,7 +254,7 @@
   background: rgb(var(--c-lift) / 0.04);
   border: 1px solid var(--border-default);
   color: var(--text-secondary);
-  font-size: 12px;
+  font-size: 0.857rem;
   font-family: var(--font-sans);
   line-height: 1;
   cursor: pointer;
@@ -289,7 +289,7 @@
 }
 
 .model-selector-caret {
-  font-size: 10px;
+  font-size: 0.714rem;
   opacity: 0.6;
 }
 
@@ -318,7 +318,7 @@
   border: none;
   border-radius: var(--radius-sm);
   color: var(--text-primary);
-  font-size: 13px;
+  font-size: 0.929rem;
   font-family: var(--font-sans);
   cursor: pointer;
   transition: background var(--transition-fast);
@@ -339,7 +339,7 @@
 }
 
 .model-option-meta {
-  font-size: 11px;
+  font-size: 0.786rem;
   color: var(--text-tertiary);
   margin-left: 8px;
 }

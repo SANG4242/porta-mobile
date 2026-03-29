@@ -32,7 +32,7 @@
 
 .sidebar-brand {
   font-family: "Outfit", var(--font-sans);
-  font-size: 17px;
+  font-size: 1.214rem;
   font-weight: 800;
   color: var(--text-primary);
   display: flex;
@@ -63,7 +63,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 16px;
+  font-size: 1.143rem;
   transition: all var(--transition-fast);
   flex-shrink: 0;
 }
@@ -92,7 +92,7 @@
   background: transparent;
   color: var(--text-tertiary);
   cursor: pointer;
-  font-size: 12px;
+  font-size: 0.857rem;
   font-weight: 500;
   font-family: var(--font-sans);
   transition: all var(--transition-fast);
@@ -111,14 +111,14 @@
   padding: 20px 12px;
   text-align: center;
   color: var(--text-tertiary);
-  font-size: 13px;
+  font-size: 0.929rem;
 }
 
 .chat-empty-project {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 13px;
+  font-size: 0.929rem;
   color: var(--text-tertiary);
   margin-top: 4px;
 }
@@ -144,7 +144,7 @@
   background: transparent;
   color: var(--text-secondary);
   cursor: pointer;
-  font-size: 13px;
+  font-size: 0.929rem;
   font-family: var(--font-sans);
   transition: all var(--transition-fast);
 }
@@ -152,12 +152,87 @@
 .sidebar-action-icon {
   width: 20px;
   text-align: center;
-  font-size: 15px;
+  font-size: 1.071rem;
   flex-shrink: 0;
 }
 
 .sidebar-action-label {
   white-space: nowrap;
+}
+
+/* ── Font size control ── */
+
+.sidebar-font-size-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px;
+  color: var(--text-secondary);
+  font-size: 0.929rem;
+  font-family: var(--font-sans);
+}
+
+.sidebar-font-size-row .sidebar-action-label {
+  flex: 1;
+}
+
+.font-size-controls {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: auto;
+}
+
+.font-size-btn {
+  width: 28px;
+  height: 26px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: var(--font-sans);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+}
+
+.font-size-btn:hover:not(:disabled) {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.font-size-btn:active:not(:disabled) {
+  background: var(--bg-active);
+}
+
+.font-size-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.font-size-value {
+  min-width: 30px;
+  height: 26px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-accent);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: var(--font-mono);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+}
+
+.font-size-value:hover {
+  background: var(--bg-tertiary);
 }
 
 /* ── Search Modal ── */
@@ -217,7 +292,7 @@
 }
 
 .search-modal-icon {
-  font-size: 14px;
+  font-size: 1rem;
   opacity: 0.5;
   flex-shrink: 0;
 }
@@ -229,7 +304,7 @@
   outline: none;
   color: var(--text-primary);
   font-family: var(--font-sans);
-  font-size: 15px;
+  font-size: 1.071rem;
 }
 
 .search-modal-input::placeholder {
@@ -241,7 +316,7 @@
   border: none;
   color: var(--text-tertiary);
   cursor: pointer;
-  font-size: 14px;
+  font-size: 1rem;
   padding: 4px 8px;
   border-radius: var(--radius-sm);
   transition: all var(--transition-fast);
@@ -260,7 +335,7 @@
 .search-modal-status {
   padding: 24px 16px;
   color: var(--text-tertiary);
-  font-size: 13px;
+  font-size: 0.929rem;
   text-align: center;
   display: flex;
   justify-content: center;
@@ -286,7 +361,7 @@
 }
 
 .search-result-title {
-  font-size: 13px;
+  font-size: 0.929rem;
   font-weight: 500;
   margin-bottom: 4px;
 }
@@ -298,7 +373,7 @@
 }
 
 .search-result-snippet {
-  font-size: 11px;
+  font-size: 0.786rem;
   color: var(--text-tertiary);
   font-family: var(--font-mono);
   white-space: nowrap;
@@ -308,7 +383,7 @@
 }
 
 .search-result-meta {
-  font-size: 11px;
+  font-size: 0.786rem;
   color: var(--text-tertiary);
   margin-top: 4px;
 }
@@ -359,7 +434,7 @@
 }
 
 .sidebar-item-title {
-  font-size: 13px;
+  font-size: 0.929rem;
   font-weight: 500;
   color: var(--text-primary);
   white-space: nowrap;
@@ -368,7 +443,7 @@
 }
 
 .sidebar-item-meta {
-  font-size: 11px;
+  font-size: 0.786rem;
   color: var(--text-tertiary);
   margin-top: 2px;
   white-space: nowrap;
@@ -442,7 +517,7 @@
   display: none;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
+  font-size: 1rem;
   transition: all var(--transition-fast);
 }
 
@@ -468,7 +543,7 @@
   border: none;
   border-radius: 3px;
   color: var(--text-primary);
-  font-size: 12px;
+  font-size: 0.857rem;
   font-family: var(--font-sans);
   cursor: pointer;
   text-align: left;

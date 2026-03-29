@@ -11,7 +11,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 16px;
+  font-size: 1.143rem;
   transition: all var(--transition-fast);
 }
 
@@ -37,7 +37,7 @@
   background: transparent;
   cursor: pointer;
   font-family: var(--font-sans);
-  font-size: 12px;
+  font-size: 0.857rem;
   font-weight: 600;
   color: var(--text-secondary);
   text-transform: uppercase;
@@ -47,7 +47,7 @@
 }
 
 .workspace-group-chevron {
-  font-size: 10px;
+  font-size: 0.714rem;
   transition: transform var(--transition-fast);
   color: var(--text-tertiary);
 }
@@ -64,7 +64,7 @@
 }
 
 .workspace-group-count {
-  font-size: 10px;
+  font-size: 0.714rem;
   color: var(--text-tertiary);
   background: rgb(var(--c-lift) / 0.05);
   padding: 0 5px;
@@ -94,7 +94,7 @@
   background: transparent;
   cursor: pointer;
   font-family: var(--font-sans);
-  font-size: 12px;
+  font-size: 0.857rem;
   font-weight: 400;
   color: var(--text-tertiary);
   text-align: left;

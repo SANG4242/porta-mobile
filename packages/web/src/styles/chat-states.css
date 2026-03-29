@@ -43,7 +43,7 @@
   background: transparent;
   border: 1px solid var(--border-subtle);
   color: var(--text-secondary);
-  font-size: 12px;
+  font-size: 0.857rem;
   line-height: 1.6;
 }
 
@@ -59,7 +59,7 @@
 
 .info-card-text {
   color: var(--text-secondary);
-  font-size: 12px;
+  font-size: 0.857rem;
   flex: 1;
   min-width: 0;
 }
@@ -82,7 +82,7 @@
   gap: 6px;
   cursor: pointer;
   color: var(--text-tertiary);
-  font-size: 12px;
+  font-size: 0.857rem;
   user-select: none;
   list-style: none;
 }
@@ -92,7 +92,7 @@
 }
 
 .thinking-chevron {
-  font-size: 10px;
+  font-size: 0.714rem;
   transition: transform var(--transition-fast);
   display: inline-block;
 }
@@ -112,7 +112,7 @@ details[open] .thinking-chevron {
   background: rgb(var(--c-lift) / 0.02);
   border-radius: var(--radius-sm);
   border: 1px solid var(--border-subtle);
-  font-size: 12px;
+  font-size: 0.857rem;
   color: var(--text-tertiary);
   line-height: 1.6;
   white-space: pre-wrap;

@@ -26,7 +26,12 @@ export function ModelSelector({ selectedModel, onSelect }: Props) {
     for (let i = 0; i < retries; i++) {
       try {
         const data = await api.models();
-        setModels(data.clientModelConfigs ?? []);
+        const configs = data.clientModelConfigs ?? [];
+        // LS returns models in non-deterministic order; sort for stable UI
+        configs.sort((a: ModelConfig, b: ModelConfig) =>
+          a.label.localeCompare(b.label),
+        );
+        setModels(configs);
         setDefaultModel(
           data.defaultOverrideModelConfig?.modelOrAlias?.model ?? null,
         );

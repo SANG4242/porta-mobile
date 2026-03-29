@@ -1,5 +1,6 @@
 /* Import order preserves the original cascade. */
 @import "./styles/foundation.css";
+@import "./styles/themes.css";
 @import "./styles/sidebar.css";
 @import "./styles/chat.css";
 @import "./styles/input.css";

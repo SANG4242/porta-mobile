@@ -122,6 +122,7 @@ export const api = {
     trajectoryId: string,
     stepIndex: number,
     approved: boolean,
+    commandLine?: string,
   ) =>
     request(`/api/conversations/${cascadeId}/command-action`, {
       method: "POST",
@@ -129,6 +130,7 @@ export const api = {
         trajectoryId,
         stepIndex,
         approved,
+        commandLine,
       }),
     }),
 

@@ -409,6 +409,22 @@ export function registerConversationRoutes(app: Hono): void {
         conversationAffinity.set(newId, targetInstance.workspaceId);
       }
 
+      // Notify IDE to show the new conversation in its Chat panel.
+      // Discovered from Antigravity source: SendActionToChatPanel with
+      // actionType "setCascadeId" tells the IDE to switch to a conversation.
+      if (newId && targetInstance) {
+        rpc.call(
+          "SendActionToChatPanel",
+          {
+            actionType: "setCascadeId",
+            payload: [Buffer.from(newId).toString("base64")],
+          },
+          targetInstance,
+        ).catch((err) => {
+          console.log(`[ide-sync] SendActionToChatPanel failed: ${err}`);
+        });
+      }
+
       // Signal WS connections for this conversation to enter ACTIVE state
       if (newId) conversationSignals.emit("activate", newId);
 
@@ -562,7 +578,7 @@ export function registerConversationRoutes(app: Hono): void {
     const id = c.req.param("id");
     try {
       const body = await c.req.json();
-      const { trajectoryId, stepIndex, approved } = body;
+      const { trajectoryId, stepIndex, approved, commandLine } = body;
 
       if (!trajectoryId || stepIndex === undefined) {
         return c.json(
@@ -574,8 +590,11 @@ export function registerConversationRoutes(app: Hono): void {
         );
       }
 
-      // Use HandleCascadeUserInteraction with commandAction field.
-      // Same RPC as filePermission, different interaction type.
+      // Use HandleCascadeUserInteraction with "runCommand" field.
+      // Field name and structure confirmed from Antigravity IDE source
+      // (workbench.desktop.main.js): interaction case "runCommand" with
+      // { confirm, proposedCommandLine, submittedCommandLine }.
+      const cmdLine = commandLine ?? "";
       const data = await rpcForConversation(
         "HandleCascadeUserInteraction",
         id,
@@ -584,8 +603,10 @@ export function registerConversationRoutes(app: Hono): void {
           interaction: {
             trajectoryId,
             stepIndex: Number(stepIndex),
-            commandAction: {
-              approved: !!approved,
+            runCommand: {
+              confirm: !!approved,
+              proposedCommandLine: cmdLine,
+              submittedCommandLine: cmdLine,
             },
           },
         },

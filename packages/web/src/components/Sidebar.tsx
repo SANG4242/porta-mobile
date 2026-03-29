@@ -1,6 +1,8 @@
 import { useMemo, useState, useRef, useEffect, useCallback } from "react";
 import type { ConversationEntry } from "../hooks/useConversations";
 import { api } from "../api/client";
+import { useTheme } from "../hooks/useTheme";
+import { useFontSize } from "../hooks/useFontSize";
 import {
   IconPlus,
   IconSearch,
@@ -47,7 +49,14 @@ function extractWorkspaceName(conv: ConversationEntry): string {
   const repo = ws.repository?.computedName;
   if (repo) return repo.split("/").pop() ?? repo;
   const uri = ws.workspaceFolderAbsoluteUri;
-  if (uri) return uri.split("/").pop() ?? "Others";
+  if (uri) {
+    const raw = uri.split("/").pop() ?? "Others";
+    try {
+      return decodeURIComponent(raw);
+    } catch {
+      return raw;
+    }
+  }
   return "Others";
 }
 
@@ -189,6 +198,9 @@ export function Sidebar({
     setExpanded((prev) => ({ ...prev, [name]: !prev[name] }));
   };
 
+  const { icon: themeIcon, cycleTheme } = useTheme();
+  const { fontSize, increase, decrease, reset, MIN_SIZE, MAX_SIZE } = useFontSize();
+
   const actions: SidebarAction[] = [
     { icon: <IconPlus size={14} />, label: "New Chat", onClick: onNew },
     {
@@ -198,6 +210,11 @@ export function Sidebar({
         setSearchOpen(true);
         setTimeout(() => searchInputRef.current?.focus(), 50);
       },
+    },
+    {
+      icon: <span className="theme-indicator">{themeIcon}</span>,
+      label: "Theme",
+      onClick: cycleTheme,
     },
   ];
 
@@ -379,6 +396,36 @@ export function Sidebar({
             <span className="sidebar-action-label">{action.label}</span>
           </button>
         ))}
+        {/* Font size control */}
+        <div className="sidebar-font-size-row">
+          <span className="sidebar-action-icon" style={{ fontSize: 13, fontWeight: 700 }}>A</span>
+          <span className="sidebar-action-label">Font Size</span>
+          <div className="font-size-controls">
+            <button
+              className="font-size-btn"
+              onClick={decrease}
+              disabled={fontSize <= MIN_SIZE}
+              title="Decrease font size"
+            >
+              A−
+            </button>
+            <button
+              className="font-size-value"
+              onClick={reset}
+              title="Reset to default (14px)"
+            >
+              {fontSize}
+            </button>
+            <button
+              className="font-size-btn"
+              onClick={increase}
+              disabled={fontSize >= MAX_SIZE}
+              title="Increase font size"
+            >
+              A+
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Conversation list */}

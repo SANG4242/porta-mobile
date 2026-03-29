@@ -31,6 +31,7 @@ export default defineConfig(({ mode }) => {
     ],
     envDir: repoRoot,
     server: {
+      host: true,
       proxy: {
         "/api": {
           target: toHttpOrigin(proxyHost, proxyPort),

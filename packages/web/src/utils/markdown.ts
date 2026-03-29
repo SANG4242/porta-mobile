@@ -1,4 +1,6 @@
 import { marked, type Tokens } from "marked";
+import katex from "katex";
+import "katex/dist/katex.min.css";
 
 const SAFE_LINK_PROTOCOLS = new Set(["http:", "https:", "mailto:"]);
 const SAFE_IMAGE_PROTOCOLS = new Set(["http:", "https:"]);
@@ -97,6 +99,61 @@ renderer.image = function (token: Tokens.Image) {
 
 marked.setOptions({ gfm: true, breaks: true, renderer });
 
+// ── LaTeX Rendering ──
+
+/**
+ * Extract LaTeX formulas from text, replace them with placeholders,
+ * and return a restore function that swaps placeholders back with
+ * rendered KaTeX HTML.
+ */
+function processLatex(text: string): { processed: string; restore: (html: string) => string } {
+  const placeholders: { id: string; html: string }[] = [];
+  let counter = 0;
+
+  function renderFormula(tex: string, displayMode: boolean): string {
+    try {
+      return katex.renderToString(tex, {
+        displayMode,
+        throwOnError: false,
+        output: "html",
+      });
+    } catch {
+      return displayMode ? `$$${tex}$$` : `$${tex}$`;
+    }
+  }
+
+  // Replace display math ($$...$$) first — must come before inline
+  let result = text.replace(
+    /\$\$([\s\S]+?)\$\$/g,
+    (_match, tex) => {
+      const id = `%%LATEX_${counter++}%%`;
+      placeholders.push({ id, html: renderFormula(tex.trim(), true) });
+      return id;
+    },
+  );
+
+  // Replace inline math ($...$) — avoid matching currency like $5
+  result = result.replace(
+    /(?<!\$)\$(?!\$)(?!\s)([^\n$]+?)(?<!\s)\$(?!\d)/g,
+    (_match, tex) => {
+      const id = `%%LATEX_${counter++}%%`;
+      placeholders.push({ id, html: renderFormula(tex.trim(), false) });
+      return id;
+    },
+  );
+
+  function restore(html: string): string {
+    let restored = html;
+    for (const { id, html: rendered } of placeholders) {
+      // marked may wrap placeholder in <p> tags, handle both raw and wrapped
+      restored = restored.replaceAll(id, rendered);
+    }
+    return restored;
+  }
+
+  return { processed: result, restore };
+}
+
 // ── Caching Markdown Rendering ──
 
 const markdownCache = new Map<string, string>();
@@ -117,7 +174,11 @@ export function renderMarkdown(text: string): string {
   }
 
   const rewritten = rewriteFileUris(text);
-  const html = marked.parse(rewritten, { async: false }) as string;
+
+  // Extract LaTeX before marked processes the text
+  const { processed, restore } = processLatex(rewritten);
+  const html = marked.parse(processed, { async: false }) as string;
+  const final = restore(html);
 
   // Cap the cache to prevent unbounded growth
   if (markdownCache.size > 500) {
@@ -125,6 +186,7 @@ export function renderMarkdown(text: string): string {
     markdownCache.delete(firstKey);
   }
 
-  markdownCache.set(text, html);
-  return html;
+  markdownCache.set(text, final);
+  return final;
 }
+

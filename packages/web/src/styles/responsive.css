@@ -69,7 +69,7 @@
   }
 
   .main-header-title {
-    font-size: 13px;
+    font-size: 0.929rem;
   }
 
   /* ── Chat area: reduced padding ── */
@@ -88,7 +88,7 @@
 
   .message-body {
     padding: 4px 10px;
-    font-size: 16px;
+    font-size: 1.143rem;
     line-height: 1.55;
   }
 
@@ -98,31 +98,31 @@
 
   .message-body pre {
     padding: 8px 10px;
-    font-size: 11px;
+    font-size: 0.786rem;
     margin: 6px -4px;
     border-radius: var(--radius-sm);
   }
 
   .message-body code {
-    font-size: 11px;
+    font-size: 0.786rem;
     padding: 1px 4px;
   }
 
   .message-body h1 {
-    font-size: 16px;
+    font-size: 1.143rem;
   }
   .message-body h2 {
-    font-size: 14px;
+    font-size: 1rem;
   }
   .message-body h3 {
-    font-size: 13px;
+    font-size: 0.929rem;
   }
   .message-body h4 {
-    font-size: 12px;
+    font-size: 0.857rem;
   }
 
   .message-body table {
-    font-size: 11px;
+    font-size: 0.786rem;
     display: block;
     overflow-x: auto;
   }
@@ -162,7 +162,7 @@
     border: 1px solid rgba(255, 255, 255, 0.15);
     background: rgba(30, 33, 40, 0.95);
     color: var(--text-secondary);
-    font-size: 16px;
+    font-size: 1.143rem;
     line-height: 1;
     align-items: center;
     justify-content: center;
@@ -184,7 +184,7 @@
     min-width: 0;
     max-width: 140px;
     padding: 5px 8px 5px 10px;
-    font-size: 11px;
+    font-size: 0.786rem;
   }
 
   .chat-input-wrap {
@@ -202,27 +202,27 @@
 
   .step-card-header {
     padding: 6px 10px;
-    font-size: 11px;
+    font-size: 0.786rem;
     gap: 6px;
   }
 
   .step-card-command {
-    font-size: 11px;
+    font-size: 0.786rem;
   }
 
   .step-card-output {
     padding: 8px 10px;
-    font-size: 10px;
+    font-size: 0.714rem;
     max-height: 200px;
   }
 
   .step-card-cwd {
-    font-size: 9px;
+    font-size: 0.643rem;
     padding: 0 10px 4px;
   }
 
   .step-card-file {
-    font-size: 10px;
+    font-size: 0.714rem;
     max-width: 120px;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -233,11 +233,11 @@
 
   .diff-content {
     max-height: 250px;
-    font-size: 10px;
+    font-size: 0.714rem;
   }
 
   .diff-file-header {
-    font-size: 10px;
+    font-size: 0.714rem;
     padding: 4px 10px;
   }
 
@@ -248,7 +248,7 @@
   /* ── Thinking block ── */
 
   .thinking-content {
-    font-size: 11px;
+    font-size: 0.786rem;
     max-height: 250px;
     padding: 6px 8px;
   }
@@ -256,7 +256,7 @@
   /* ── Chat empty state ── */
 
   .chat-empty-text {
-    font-size: 14px;
+    font-size: 1rem;
   }
 
   .chat-empty-icon svg {
@@ -284,16 +284,16 @@
   }
 
   .modal-icon {
-    font-size: 28px;
+    font-size: 2rem;
     margin-bottom: 8px;
   }
 
   .modal-title {
-    font-size: 16px;
+    font-size: 1.143rem;
   }
 
   .modal-body {
-    font-size: 13px;
+    font-size: 0.929rem;
   }
 
   .modal-actions {
@@ -314,11 +314,11 @@
 
   .model-option {
     padding: 6px 10px;
-    font-size: 12px;
+    font-size: 0.857rem;
   }
 
   .model-option-meta {
-    font-size: 10px;
+    font-size: 0.714rem;
   }
 
   /* ── Sidebar list items: larger touch targets ── */

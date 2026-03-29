@@ -135,10 +135,15 @@ export function useStepsStream(
       }
 
       const apiBase = import.meta.env.VITE_API_BASE ?? "";
+      // VITE_WS_BASE allows WS to bypass Vite's proxy (which can fail WS
+      // upgrade over ZeroTier/VPN IPs) and connect directly to the proxy.
+      const wsBase = import.meta.env.VITE_WS_BASE ?? "";
       let url: string;
-      if (apiBase) {
-        const wsBase = apiBase.replace(/^http/, "ws");
+      if (wsBase) {
         url = `${wsBase}/api/conversations/${cascadeId}/ws`;
+      } else if (apiBase) {
+        const wsFromApi = apiBase.replace(/^http/, "ws");
+        url = `${wsFromApi}/api/conversations/${cascadeId}/ws`;
       } else {
         const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
         url = `${protocol}//${window.location.host}/api/conversations/${cascadeId}/ws`;

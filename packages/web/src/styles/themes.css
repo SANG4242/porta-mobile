@@ -1,0 +1,171 @@
+/* ── Porta Theme Variants ──
+ * Default (dark) uses :root variables from foundation.css.
+ * Each theme class overrides color tokens on <html>.
+ */
+
+/* ── Light ── */
+.theme-light {
+  --c-accent: 59 130 246;
+  --c-success: 34 197 94;
+  --c-error: 239 68 68;
+  --c-lift: 0 0 0;
+
+  --bg-primary: #f8fafc;
+  --bg-secondary: #f1f5f9;
+  --bg-tertiary: #e2e8f0;
+  --bg-surface: #ffffff;
+  --bg-hover: #e2e8f0;
+  --bg-active: #cbd5e1;
+
+  --border-subtle: #e2e8f0;
+  --border-default: #cbd5e1;
+
+  --text-primary: #1e293b;
+  --text-secondary: #475569;
+  --text-tertiary: #94a3b8;
+  --text-accent: #3b82f6;
+  --text-on-solid: #ffffff;
+
+  --accent: rgb(var(--c-accent));
+  --accent-hover: #2563eb;
+
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.12);
+}
+
+/* ── Pastel ── */
+.theme-pastel {
+  --c-accent: 244 114 182;
+  --c-success: 52 211 153;
+  --c-error: 251 113 133;
+  --c-lift: 0 0 0;
+
+  --bg-primary: #fef7f0;
+  --bg-secondary: #fdf2e9;
+  --bg-tertiary: #fce7d6;
+  --bg-surface: #fffbf8;
+  --bg-hover: #fce7d6;
+  --bg-active: #f9d4be;
+
+  --border-subtle: rgba(244, 114, 182, 0.15);
+  --border-default: rgba(244, 114, 182, 0.25);
+
+  --text-primary: #4a3728;
+  --text-secondary: #6b5344;
+  --text-tertiary: #a08979;
+  --text-accent: #ec4899;
+  --text-on-solid: #ffffff;
+
+  --accent: rgb(var(--c-accent));
+  --accent-hover: #ec4899;
+
+  --shadow-sm: 0 1px 3px rgba(244, 114, 182, 0.1);
+  --shadow-md: 0 4px 12px rgba(244, 114, 182, 0.12);
+  --shadow-lg: 0 8px 30px rgba(244, 114, 182, 0.15);
+}
+
+/* ── Rainbow (dark with vivid accents) ── */
+.theme-rainbow {
+  --c-accent: 244 63 94;
+  --c-success: 16 185 129;
+  --c-error: 239 68 68;
+  --c-lift: 255 255 255;
+
+  --bg-primary: #0c0c18;
+  --bg-secondary: #111128;
+  --bg-tertiary: #1a1a38;
+  --bg-surface: rgba(20, 20, 40, 0.95);
+  --bg-hover: #222248;
+  --bg-active: #2a2a58;
+
+  --border-subtle: rgba(139, 92, 246, 0.2);
+  --border-default: rgba(139, 92, 246, 0.35);
+
+  --text-primary: #ffffff;
+  --text-secondary: rgba(255, 255, 255, 0.75);
+  --text-tertiary: rgba(255, 255, 255, 0.45);
+  --text-accent: #f472b6;
+  --text-on-solid: #ffffff;
+
+  --accent: rgb(var(--c-accent));
+  --accent-hover: #fb7185;
+
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.6);
+  --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.7);
+}
+
+/* Rainbow gradient on sidebar brand */
+.theme-rainbow .sidebar-brand {
+  background: linear-gradient(
+    135deg,
+    #f43f5e 0%,
+    #8b5cf6 40%,
+    #06b6d4 100%
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ── Slate (cool gray-blue) ── */
+.theme-slate {
+  --c-accent: 100 116 139;
+  --c-success: 74 222 128;
+  --c-error: 248 113 113;
+  --c-lift: 255 255 255;
+
+  --bg-primary: #0f172a;
+  --bg-secondary: #1e293b;
+  --bg-tertiary: #334155;
+  --bg-surface: #1e293b;
+  --bg-hover: #334155;
+  --bg-active: #475569;
+
+  --border-subtle: #334155;
+  --border-default: #475569;
+
+  --text-primary: #e2e8f0;
+  --text-secondary: #94a3b8;
+  --text-tertiary: #64748b;
+  --text-accent: #93c5fd;
+  --text-on-solid: #ffffff;
+
+  --accent: rgb(var(--c-accent));
+  --accent-hover: #93c5fd;
+
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.6);
+}
+
+/* Slate brand: monochrome gradient */
+.theme-slate .sidebar-brand {
+  background: linear-gradient(
+    135deg,
+    #94a3b8 0%,
+    #cbd5e1 50%,
+    #e2e8f0 100%
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ── Light / Pastel scrollbar overrides ── */
+.theme-light ::-webkit-scrollbar-thumb,
+.theme-pastel ::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+}
+
+.theme-light ::-webkit-scrollbar-thumb:hover,
+.theme-pastel ::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.25);
+}
+
+/* ── Theme button indicator (current theme icon) ── */
+.theme-indicator {
+  font-size: 1rem;
+  line-height: 1;
+}
