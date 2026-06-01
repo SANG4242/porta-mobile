@@ -128,6 +128,10 @@ export function Sidebar({
 
   const [targetPid, setTargetPid] = useState<string | null>(() => localStorage.getItem("porta:targetPid"));
 
+  useEffect(() => {
+    setTargetPid(localStorage.getItem("porta:targetPid"));
+  }, [activeId]);
+
   const handleInstanceChange = (pidStr: string) => {
     if (pidStr === "auto") {
       localStorage.removeItem("porta:targetPid");
@@ -390,13 +394,23 @@ export function Sidebar({
         >
           Porta
         </span>
-        <button
-          className="sidebar-icon-btn"
-          onClick={onToggle}
-          title="Collapse sidebar"
-        >
-          <IconMenu size={16} />
-        </button>
+        <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+          <button
+            className="sidebar-icon-btn"
+            onClick={() => window.location.reload()}
+            title="Refresh"
+            style={{ fontSize: "14px", cursor: "pointer" }}
+          >
+            🔄
+          </button>
+          <button
+            className="sidebar-icon-btn"
+            onClick={onToggle}
+            title="Collapse sidebar"
+          >
+            <IconMenu size={16} />
+          </button>
+        </div>
       </div>
 
       {/* Action buttons */}

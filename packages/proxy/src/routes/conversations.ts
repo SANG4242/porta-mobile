@@ -3,7 +3,7 @@
  */
 
 import type { Hono } from "hono";
-import type { LSInstance } from "../discovery.js";
+import { type LSInstance, learnedWorkspaceIds } from "../discovery.js";
 import {
   discovery,
   rpc,
@@ -120,13 +120,14 @@ export function registerConversationRoutes(app: Hono): void {
 
   app.get("/api/conversations", async (c) => {
     try {
-      const instances = await discovery.getInstances();
+      const pinned = await getPinnedInstance(c);
+      const allInstances = await discovery.getInstances();
+      const instances = pinned ? [pinned] : allInstances;
+
       const merged: Record<string, Record<string, unknown>> = {};
       const ownerMap = new Map<string, LSInstance>();
 
       // Build normalized set of workspaceIds served by running LS instances.
-      // Normalization handles format differences between CLI --workspace_id
-      // (e.g. file_e_3A_Work_novels) and URI-derived IDs (e.g. file_E:_Work_novels).
       const knownWsIds = new Set(
         instances
           .map((i) => i.workspaceId)
@@ -140,27 +141,41 @@ export function registerConversationRoutes(app: Hono): void {
             const data = await rpc.call<{
               trajectorySummaries: Record<string, Record<string, unknown>>;
             }>("GetAllCascadeTrajectories", {}, inst);
+
             const summaries = data.trajectorySummaries ?? {};
             for (const [id, summary] of Object.entries(summaries)) {
-              // Skip conversations whose workspace isn't served by any running LS
+              // Extract workspace uri to dynamically enrich instance's workspaceId
               const workspaces = summary.workspaces as
                 | { workspaceFolderAbsoluteUri?: string }[]
                 | undefined;
               const wsUri = workspaces?.[0]?.workspaceFolderAbsoluteUri;
-              if (wsUri && !knownWsIds.has(normalizeWorkspaceId(uriToWorkspaceId(wsUri)))) continue;
+              if (wsUri && !inst.workspaceId) {
+                const computedWsId = uriToWorkspaceId(wsUri);
+                inst.workspaceId = computedWsId;
+                learnedWorkspaceIds.set(inst.pid, computedWsId);
+                knownWsIds.add(normalizeWorkspaceId(computedWsId));
+              }
 
-              // NOTE: We intentionally do NOT inject the LS's workspace URI
-              // into conversations that lack one. With warm-up loading .pb
-              // files onto all LSes, the loading LS is not necessarily the
-              // owner. Instead, we rely on the .pb itself containing the
-              // correct workspace metadata — once warm-up loads it, the LS
-              // returns it with genuine metadata on the next poll cycle.
+              // If pinned to a workspace, filter out memory conversations that don't match
+              if (pinned) {
+                if (wsUri) {
+                  const wsId = uriToWorkspaceId(wsUri);
+                  if (pinned.workspaceId && normalizeWorkspaceId(wsId) !== normalizeWorkspaceId(pinned.workspaceId)) {
+                    continue;
+                  }
+                } else {
+                  if (pinned.workspaceId) continue;
+                }
+              }
 
               const existing = merged[id];
               const newCount = (summary.stepCount as number) ?? 0;
               const oldCount = (existing?.stepCount as number) ?? -1;
               if (!existing || newCount > oldCount) {
-                merged[id] = summary;
+                merged[id] = {
+                  ...(summary as Record<string, unknown>),
+                  lsPid: inst.pid, // Tag each conversation with its owning instance PID
+                };
                 ownerMap.set(id, inst);
               }
             }
@@ -179,12 +194,6 @@ export function registerConversationRoutes(app: Hono): void {
         if (wsUri) {
           conversationAffinity.set(id, uriToWorkspaceId(wsUri));
         }
-        // NOTE: We intentionally do NOT learn affinity from the ownerMap
-        // when the conversation has no workspace metadata. With warm-up,
-        // the owning LS is not necessarily the one that returned the summary.
-        // Affinity is only learned from genuine workspace metadata in the
-        // conversation itself — either from the .pb or from the LS that
-        // originally created it.
       }
 
       // Also scan disk for all .pb files
@@ -197,14 +206,27 @@ export function registerConversationRoutes(app: Hono): void {
         if (!merged[diskId.id]) {
           let injectedWorkspaces: { workspaceFolderAbsoluteUri: string }[] = [];
           const wsId = conversationAffinity.get(diskId.id);
+          
+          // Strict workspace filtering:
+          if (pinned) {
+            if (pinned.workspaceId) {
+              // Pinned instance has workspace -> only show disk conversations for this workspace
+              if (!wsId || normalizeWorkspaceId(wsId) !== normalizeWorkspaceId(pinned.workspaceId)) {
+                continue;
+              }
+            } else {
+              // Pinned instance is "No Project" -> skip all workspace disk conversations
+              if (wsId) {
+                continue;
+              }
+            }
+          }
+
           if (wsId && wsId.startsWith("file_")) {
             const uri = wsId.replace(/^file_/, "file:///").replace(/_/g, "/");
             injectedWorkspaces = [{ workspaceFolderAbsoluteUri: uri }];
           }
 
-          // Always queue for warm-up, even with cached affinity.
-          // Affinity may be stale (LS restarted, conversation fell out of
-          // memory) — warm-up ensures the LS re-loads it from disk.
           diskOnlyIds.push(diskId.id);
 
           merged[diskId.id] = {

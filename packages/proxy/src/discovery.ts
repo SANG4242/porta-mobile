@@ -292,6 +292,13 @@ async function queryWorkspaceInfo(
 
 /**
  * Enrich instances that lack workspaceId by querying the LS directly.
+ */
+export const learnedWorkspaceIds = new Map<number, string>();
+
+/**
+ * Query each candidate LS instance via RPC to check if its CSRF token
+ * is valid and resolve its active workspace ID if available.
+ *
  * This is the authoritative resolution when daemon or process metadata
  * is incomplete or stale.
  */
@@ -302,7 +309,15 @@ async function enrichReachableInstances(
     instances.map(async (inst) => {
       const info = await queryWorkspaceInfo(inst);
       if (!info.reachable) return null;
-      if (info.workspaceId) inst.workspaceId = info.workspaceId;
+      if (info.workspaceId) {
+        inst.workspaceId = info.workspaceId;
+        learnedWorkspaceIds.set(inst.pid, info.workspaceId);
+      } else {
+        const learned = learnedWorkspaceIds.get(inst.pid);
+        if (learned) {
+          inst.workspaceId = learned;
+        }
+      }
       return inst;
     }),
   );
@@ -346,6 +361,12 @@ export async function discoverInstances(): Promise<LSInstance[]> {
   }
 
   const instances = Array.from(instanceMap.values());
+  for (const inst of instances) {
+    const learned = learnedWorkspaceIds.get(inst.pid);
+    if (learned) {
+      inst.workspaceId = learned;
+    }
+  }
   return enrichReachableInstances(instances);
 }
 

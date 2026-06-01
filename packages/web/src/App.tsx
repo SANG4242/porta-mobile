@@ -240,6 +240,10 @@ function ChatView() {
         conversations={conversations}
         activeId={activeId}
         onSelect={(id) => {
+          const conv = conversations.find((c) => c.id === id);
+          if (conv && (conv as any).lsPid) {
+            localStorage.setItem("porta:targetPid", String((conv as any).lsPid));
+          }
           setOptimisticMessages([]);
           navigate(chatUrl(id));
           if (isMobile()) setSidebarOpen(false);
