@@ -84,6 +84,20 @@ function ChatView() {
   const isRunning = activeConv?.summary.status === "CASCADE_RUN_STATUS_RUNNING";
   const connected = !!health && health.languageServers.length > 0;
 
+  // Auto-redirect invalid/filtered conversation IDs to prevent broken UI states
+  useEffect(() => {
+    if (loading || conversations.length === 0 || !activeId) return;
+    const exists = conversations.some((c) => c.id === activeId);
+    if (!exists) {
+      const firstWs = workspaces[0];
+      if (firstWs) {
+        navigate(`/${slugFromUri(firstWs.uri)}`, { replace: true });
+      } else {
+        navigate("/unknown", { replace: true });
+      }
+    }
+  }, [loading, conversations, activeId, workspaces, navigate]);
+
   const {
     optimisticMessages,
     setOptimisticMessages,

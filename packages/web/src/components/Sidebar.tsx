@@ -140,7 +140,10 @@ export function Sidebar({
       localStorage.setItem("porta:targetPid", pidStr);
       setTargetPid(pidStr);
     }
-    window.location.reload();
+    // Delay reload slightly to let native mobile dropdown finish closing and prevent viewport recalculation bugs
+    setTimeout(() => {
+      window.location.reload();
+    }, 150);
   };
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
