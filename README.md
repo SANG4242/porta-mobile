@@ -16,6 +16,10 @@ This fork includes the following improvements over the [original porta](https://
 
 | Feature | Description |
 |---|---|
+| **Antigravity 2.0 Support** | Compatible with both Antigravity 1.x and 2.0 (standalone hub mode, `source` field injection) |
+| **Multi-Instance IDE Selector** | Switch between multiple running Antigravity instances from the sidebar |
+| **Manual Refresh Button** | Refresh conversation list instantly from the sidebar — no need to wait for auto-polling |
+| **Mobile Input Fix** | Fixed input bar being cut off on mobile due to soft keyboard and fullscreen gesture bar (dynamic viewport height + safe area insets) |
 | **WebSocket Real-time Streaming** | Agent responses now stream in real-time via WebSocket, instead of requiring manual refresh |
 | **Command Approval Fix** | Fixed RPC field mapping errors that broke the approve/reject flow for agent-proposed commands |
 | **Image Display** | Images uploaded from the IDE are now visible in the mobile interface (via proxy file endpoint) |
@@ -25,6 +29,10 @@ This fork includes the following improvements over the [original porta](https://
 | **Font Size Control** | Adjustable font size from the sidebar, using `rem`-based scaling for cross-browser compatibility |
 | **LAN-Ready by Default** | Vite dev server binds to all interfaces (`host: true`), no extra flags needed for LAN access |
 | **Background Startup** | Included scripts for silent background startup and Windows auto-start at boot |
+
+## Changelog
+
+- **2026-06-01** — Merged latest upstream changes from [porta](https://github.com/L1M80/porta); added Antigravity 2.0 compatibility, multi-instance IDE selector, manual refresh button; fixed mobile input truncation on fullscreen devices
 
 ## Quick Start
 
@@ -98,8 +106,8 @@ Porta doesn't stream pixels or run your workspace in the cloud. It relays struct
 
 - **Antigravity must be running** — Porta is a bridge, not a standalone tool
 - **Chat only** — no code editing or terminal access; use your local editor for that
-- **Single user** — connects to one Antigravity instance
 - **Same-side requirement** — the proxy must run on the same machine (or same environment, e.g. not WSL2 vs Windows host) as Antigravity
+- **Mixed conversation history with 2.0** — Antigravity 1.x and 2.0 store conversations in the same global directory. When both versions are running, the conversation list may show entries from both, and pinning to a specific 2.0 instance can cause read delays. Switching to "auto" mode resolves most issues
 
 ## Documentation
 
