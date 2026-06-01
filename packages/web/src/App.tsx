@@ -26,6 +26,20 @@ import type { HealthResponse, MediaAttachment } from "./types";
 import type { PlannerType } from "./components/ChatInput";
 
 export default function App() {
+  useEffect(() => {
+    const updateVh = () => {
+      const vh = window.innerHeight * 0.01;
+      document.documentElement.style.setProperty("--vh", `${vh}px`);
+    };
+    updateVh();
+    window.addEventListener("resize", updateVh);
+    window.addEventListener("orientationchange", updateVh);
+    return () => {
+      window.removeEventListener("resize", updateVh);
+      window.removeEventListener("orientationchange", updateVh);
+    };
+  }, []);
+
   return (
     <Routes>
       <Route path="/" element={<RootRedirect />} />

@@ -1,0 +1,712 @@
+﻿diff --git a/packages/proxy/src/discovery.ts b/packages/proxy/src/discovery.ts
+index 1ad2b1a..42ab1ad 100644
+--- a/packages/proxy/src/discovery.ts
++++ b/packages/proxy/src/discovery.ts
+@@ -31,6 +31,7 @@ export interface LSInstance {
+   workspaceId?: string;
+   /** Derived from discovery source */
+   source: "daemon" | "process";
++  executable?: string;
+ }
+ 
+ const DAEMON_DIR = join(homedir(), ".gemini", "antigravity", "daemon");
+@@ -84,6 +85,7 @@ async function discoverFromProcess(): Promise<LSInstance[]> {
+       httpsPort: number;
+       httpPort: number;
+       lspPort: number;
++      executable?: string;
+     }> = [];
+ 
+     for (const candidate of candidates) {
+@@ -98,6 +100,7 @@ async function discoverFromProcess(): Promise<LSInstance[]> {
+           csrfToken: candidate.csrfToken,
+           workspaceId: candidate.workspaceId,
+           source: "process",
++          executable: candidate.executable,
+         });
+       } else {
+         pendingInstances.push({
+@@ -107,6 +110,7 @@ async function discoverFromProcess(): Promise<LSInstance[]> {
+           httpsPort: 0,
+           httpPort: candidate.httpPort,
+           lspPort: candidate.lspPort,
++          executable: candidate.executable,
+         });
+       }
+     }
+@@ -133,6 +137,7 @@ async function discoverFromProcess(): Promise<LSInstance[]> {
+             csrfToken: pending.csrfToken,
+             workspaceId: pending.workspaceId,
+             source: "process",
++            executable: pending.executable,
+           });
+         }),
+       );
+@@ -287,6 +292,13 @@ async function queryWorkspaceInfo(
+ 
+ /**
+  * Enrich instances that lack workspaceId by querying the LS directly.
++ */
++export const learnedWorkspaceIds = new Map<number, string>();
++
++/**
++ * Query each candidate LS instance via RPC to check if its CSRF token
++ * is valid and resolve its active workspace ID if available.
++ *
+  * This is the authoritative resolution when daemon or process metadata
+  * is incomplete or stale.
+  */
+@@ -297,7 +309,15 @@ async function enrichReachableInstances(
+     instances.map(async (inst) => {
+       const info = await queryWorkspaceInfo(inst);
+       if (!info.reachable) return null;
+-      if (info.workspaceId) inst.workspaceId = info.workspaceId;
++      if (info.workspaceId) {
++        inst.workspaceId = info.workspaceId;
++        learnedWorkspaceIds.set(inst.pid, info.workspaceId);
++      } else {
++        const learned = learnedWorkspaceIds.get(inst.pid);
++        if (learned) {
++          inst.workspaceId = learned;
++        }
++      }
+       return inst;
+     }),
+   );
+@@ -341,6 +361,12 @@ export async function discoverInstances(): Promise<LSInstance[]> {
+   }
+ 
+   const instances = Array.from(instanceMap.values());
++  for (const inst of instances) {
++    const learned = learnedWorkspaceIds.get(inst.pid);
++    if (learned) {
++      inst.workspaceId = learned;
++    }
++  }
+   return enrichReachableInstances(instances);
+ }
+ 
+diff --git a/packages/proxy/src/index.ts b/packages/proxy/src/index.ts
+index f187044..b168789 100644
+--- a/packages/proxy/src/index.ts
++++ b/packages/proxy/src/index.ts
+@@ -54,6 +54,7 @@ app.get("/api/health", async (c) => {
+       httpsPort: i.httpsPort,
+       workspaceId: i.workspaceId,
+       source: i.source,
++      executable: i.executable,
+     })),
+   });
+ });
+diff --git a/packages/proxy/src/platform/shared.ts b/packages/proxy/src/platform/shared.ts
+index 0020e50..591700b 100644
+--- a/packages/proxy/src/platform/shared.ts
++++ b/packages/proxy/src/platform/shared.ts
+@@ -74,6 +74,7 @@ export function parseCommandCandidate(
+   return {
+     pid,
+     csrfToken,
++    executable,
+     workspaceId: parseArgValue(args, "--workspace_id"),
+     httpsPort: parsePort(args, "--server_port"),
+     httpPort: parsePort(args, "--extension_server_port"),
+diff --git a/packages/proxy/src/platform/types.ts b/packages/proxy/src/platform/types.ts
+index eb158e6..f050cec 100644
+--- a/packages/proxy/src/platform/types.ts
++++ b/packages/proxy/src/platform/types.ts
+@@ -5,6 +5,7 @@ export interface ProcessDiscoveryCandidate {
+   httpsPort: number;
+   httpPort: number;
+   lspPort: number;
++  executable?: string;
+ }
+ 
+ export interface PlatformAdapter {
+diff --git a/packages/proxy/src/routes/conversations.ts b/packages/proxy/src/routes/conversations.ts
+index a314e78..225ecf9 100644
+--- a/packages/proxy/src/routes/conversations.ts
++++ b/packages/proxy/src/routes/conversations.ts
+@@ -3,7 +3,7 @@
+  */
+ 
+ import type { Hono } from "hono";
+-import type { LSInstance } from "../discovery.js";
++import { type LSInstance, learnedWorkspaceIds } from "../discovery.js";
+ import {
+   discovery,
+   rpc,
+@@ -109,15 +109,25 @@ function warmUpDiskConversations(
+ 
+ 
+ export function registerConversationRoutes(app: Hono): void {
++  async function getPinnedInstance(c: any): Promise<LSInstance | undefined> {
++    const pidHeader = c.req.header("x-porta-target-pid");
++    if (!pidHeader) return undefined;
++    const pid = parseInt(pidHeader, 10);
++    if (Number.isNaN(pid)) return undefined;
++    const instances = await discovery.getInstances();
++    return instances.find((i) => i.pid === pid);
++  }
++
+   app.get("/api/conversations", async (c) => {
+     try {
+-      const instances = await discovery.getInstances();
++      const pinned = await getPinnedInstance(c);
++      const allInstances = await discovery.getInstances();
++      const instances = pinned ? [pinned] : allInstances;
++
+       const merged: Record<string, Record<string, unknown>> = {};
+       const ownerMap = new Map<string, LSInstance>();
+ 
+       // Build normalized set of workspaceIds served by running LS instances.
+-      // Normalization handles format differences between CLI --workspace_id
+-      // (e.g. file_e_3A_Work_novels) and URI-derived IDs (e.g. file_E:_Work_novels).
+       const knownWsIds = new Set(
+         instances
+           .map((i) => i.workspaceId)
+@@ -131,27 +141,41 @@ export function registerConversationRoutes(app: Hono): void {
+             const data = await rpc.call<{
+               trajectorySummaries: Record<string, Record<string, unknown>>;
+             }>("GetAllCascadeTrajectories", {}, inst);
++
+             const summaries = data.trajectorySummaries ?? {};
+             for (const [id, summary] of Object.entries(summaries)) {
+-              // Skip conversations whose workspace isn't served by any running LS
++              // Extract workspace uri to dynamically enrich instance's workspaceId
+               const workspaces = summary.workspaces as
+                 | { workspaceFolderAbsoluteUri?: string }[]
+                 | undefined;
+               const wsUri = workspaces?.[0]?.workspaceFolderAbsoluteUri;
+-              if (wsUri && !knownWsIds.has(normalizeWorkspaceId(uriToWorkspaceId(wsUri)))) continue;
++              if (wsUri && !inst.workspaceId) {
++                const computedWsId = uriToWorkspaceId(wsUri);
++                inst.workspaceId = computedWsId;
++                learnedWorkspaceIds.set(inst.pid, computedWsId);
++                knownWsIds.add(normalizeWorkspaceId(computedWsId));
++              }
+ 
+-              // NOTE: We intentionally do NOT inject the LS's workspace URI
+-              // into conversations that lack one. With warm-up loading .pb
+-              // files onto all LSes, the loading LS is not necessarily the
+-              // owner. Instead, we rely on the .pb itself containing the
+-              // correct workspace metadata — once warm-up loads it, the LS
+-              // returns it with genuine metadata on the next poll cycle.
++              // If pinned to a workspace, filter out memory conversations that don't match
++              if (pinned) {
++                if (wsUri) {
++                  const wsId = uriToWorkspaceId(wsUri);
++                  if (pinned.workspaceId && normalizeWorkspaceId(wsId) !== normalizeWorkspaceId(pinned.workspaceId)) {
++                    continue;
++                  }
++                } else {
++                  if (pinned.workspaceId) continue;
++                }
++              }
+ 
+               const existing = merged[id];
+               const newCount = (summary.stepCount as number) ?? 0;
+               const oldCount = (existing?.stepCount as number) ?? -1;
+               if (!existing || newCount > oldCount) {
+-                merged[id] = summary;
++                merged[id] = {
++                  ...(summary as Record<string, unknown>),
++                  lsPid: inst.pid, // Tag each conversation with its owning instance PID
++                };
+                 ownerMap.set(id, inst);
+               }
+             }
+@@ -170,12 +194,6 @@ export function registerConversationRoutes(app: Hono): void {
+         if (wsUri) {
+           conversationAffinity.set(id, uriToWorkspaceId(wsUri));
+         }
+-        // NOTE: We intentionally do NOT learn affinity from the ownerMap
+-        // when the conversation has no workspace metadata. With warm-up,
+-        // the owning LS is not necessarily the one that returned the summary.
+-        // Affinity is only learned from genuine workspace metadata in the
+-        // conversation itself — either from the .pb or from the LS that
+-        // originally created it.
+       }
+ 
+       // Also scan disk for all .pb files
+@@ -188,14 +206,27 @@ export function registerConversationRoutes(app: Hono): void {
+         if (!merged[diskId.id]) {
+           let injectedWorkspaces: { workspaceFolderAbsoluteUri: string }[] = [];
+           const wsId = conversationAffinity.get(diskId.id);
++          
++          // Strict workspace filtering:
++          if (pinned) {
++            if (pinned.workspaceId) {
++              // Pinned instance has workspace -> only show disk conversations for this workspace
++              if (!wsId || normalizeWorkspaceId(wsId) !== normalizeWorkspaceId(pinned.workspaceId)) {
++                continue;
++              }
++            } else {
++              // Pinned instance is "No Project" -> skip all workspace disk conversations
++              if (wsId) {
++                continue;
++              }
++            }
++          }
++
+           if (wsId && wsId.startsWith("file_")) {
+             const uri = wsId.replace(/^file_/, "file:///").replace(/_/g, "/");
+             injectedWorkspaces = [{ workspaceFolderAbsoluteUri: uri }];
+           }
+ 
+-          // Always queue for warm-up, even with cached affinity.
+-          // Affinity may be stale (LS restarted, conversation fell out of
+-          // memory) — warm-up ensures the LS re-loads it from disk.
+           diskOnlyIds.push(diskId.id);
+ 
+           merged[diskId.id] = {
+@@ -227,9 +258,10 @@ export function registerConversationRoutes(app: Hono): void {
+   app.get("/api/conversations/:id", async (c) => {
+     const id = c.req.param("id");
+     try {
++      const pinned = await getPinnedInstance(c);
+       const data = await rpcForConversation("GetCascadeTrajectory", id, {
+         cascadeId: id,
+-      }, undefined, true);
++      }, pinned, true);
+       return c.json(data);
+     } catch (err) {
+       return handleRPCError(c, err);
+@@ -244,16 +276,17 @@ export function registerConversationRoutes(app: Hono): void {
+       : undefined;
+ 
+     try {
++      const pinned = await getPinnedInstance(c);
+       let resolvedOffset = offset;
+       let stepCount: number | undefined;
+-      let pinnedInstance: LSInstance | undefined;
++      let pinnedInstance: LSInstance | undefined = pinned;
+       let stepsArray: unknown[] = [];
+ 
+       if (c.req.query("tail")) {
+         // readOnly=true: this endpoint only reads steps; the pinned instance
+         // is NOT reused for mutations, so try-all fallback is safe and
+         // necessary for disk-only conversations that no LS has in memory yet.
+-        const sc = await getStepCount(id, undefined, true);
++        const sc = await getStepCount(id, pinned, true);
+         pinnedInstance = sc.instance;
+         if (sc.count > 0) {
+           stepCount = sc.count;
+@@ -304,7 +337,7 @@ export function registerConversationRoutes(app: Hono): void {
+           } else if (isRecoverableStepError(fetchErr)) {
+             // Corrupted batch (e.g. invalid UTF-8) — binary search forward
+             if (stepCount === undefined) {
+-              const sc = await getStepCount(id, undefined, true);
++              const sc = await getStepCount(id, pinned, true);
+               stepCount = sc.count;
+               pinnedInstance ??= sc.instance;
+             }
+@@ -353,41 +386,43 @@ export function registerConversationRoutes(app: Hono): void {
+ 
+       let workspaceUri: string | undefined = body.workspaceFolderAbsoluteUri;
+ 
+-      // Resolve which LS instance to use based on workspace URI
+-      let targetInstance: LSInstance | undefined;
+-      if (workspaceUri) {
+-        const wsId = normalizeWorkspaceId(uriToWorkspaceId(workspaceUri));
+-        const instances = await discovery.getInstances();
+-        targetInstance =
+-          instances.find(
+-            (i) => i.workspaceId && normalizeWorkspaceId(i.workspaceId) === wsId,
+-          ) ?? undefined;
+-
+-        // Workspace was explicitly requested but no LS owns it — fail clearly
+-        if (!targetInstance) {
+-          return c.json(
+-            {
+-              error:
+-                "No Language Server found for this workspace. Open the project in Antigravity first.",
+-              detail: workspaceUri,
+-            },
+-            503,
+-          );
+-        }
+-      } else {
+-        // No workspace specified — pick first available LS and auto-inject
+-        targetInstance = (await discovery.getInstance()) ?? undefined;
+-        try {
+-          const wsInfos = (await rpc.call(
+-            "GetWorkspaceInfos",
+-            {},
+-            targetInstance,
+-          )) as {
+-            workspaceInfos?: { workspaceUri: string }[];
+-          };
+-          workspaceUri = wsInfos.workspaceInfos?.[0]?.workspaceUri;
+-        } catch {
+-          // best-effort — proceed without workspace
++      // Resolve which LS instance to use based on target PID or workspace URI
++      let targetInstance = await getPinnedInstance(c);
++      if (!targetInstance) {
++        if (workspaceUri) {
++          const wsId = normalizeWorkspaceId(uriToWorkspaceId(workspaceUri));
++          const instances = await discovery.getInstances();
++          targetInstance =
++            instances.find(
++              (i) => i.workspaceId && normalizeWorkspaceId(i.workspaceId) === wsId,
++            ) ?? undefined;
++
++          // Workspace was explicitly requested but no LS owns it — fail clearly
++          if (!targetInstance) {
++            return c.json(
++              {
++                error:
++                  "No Language Server found for this workspace. Open the project in Antigravity first.",
++                detail: workspaceUri,
++              },
++              503,
++            );
++          }
++        } else {
++          // No workspace specified — pick first available LS and auto-inject
++          targetInstance = (await discovery.getInstance()) ?? undefined;
++          try {
++            const wsInfos = (await rpc.call(
++              "GetWorkspaceInfos",
++              {},
++              targetInstance,
++            )) as {
++              workspaceInfos?: { workspaceUri: string }[];
++            };
++            workspaceUri = wsInfos.workspaceInfos?.[0]?.workspaceUri;
++          } catch {
++            // best-effort — proceed without workspace
++          }
+         }
+       }
+ 
+@@ -397,6 +432,7 @@ export function registerConversationRoutes(app: Hono): void {
+           ...body,
+           metadata,
+           ...(workspaceUri ? { workspaceFolderAbsoluteUri: workspaceUri } : {}),
++          trajectorySource: "CORTEX_TRAJECTORY_SOURCE_INTERACTIVE_CASCADE",
+         },
+         targetInstance,
+       );
+@@ -437,16 +473,18 @@ export function registerConversationRoutes(app: Hono): void {
+   app.post("/api/conversations/:id/messages", async (c) => {
+     const id = c.req.param("id");
+     try {
++      const pinned = await getPinnedInstance(c);
+       return await runConversationMutation(id, async () => {
+         const body = await c.req.json();
+         const { items, model, media, plannerType, clientMessageId } = body;
+         const metadata = await getMetadata(!!body.fileAccessGranted);
+-        const { count: preSendStepCount, instance } = await getStepCount(id);
++        const { count: preSendStepCount, instance } = await getStepCount(id, pinned);
+ 
+         const req: Record<string, unknown> = {
+           metadata,
+           cascadeId: id,
+           items,
++          trajectorySource: "CORTEX_TRAJECTORY_SOURCE_INTERACTIVE_CASCADE",
+         };
+ 
+         if (media && Array.isArray(media) && media.length > 0) {
+@@ -469,7 +507,7 @@ export function registerConversationRoutes(app: Hono): void {
+           "SendUserCascadeMessage",
+           id,
+           req,
+-          instance,
++          pinned ?? instance,
+         );
+         if (typeof clientMessageId === "string" && clientMessageId.length > 0) {
+           messageTracker.trackPendingMessage(
+@@ -491,9 +529,10 @@ export function registerConversationRoutes(app: Hono): void {
+   app.post("/api/conversations/:id/stop", async (c) => {
+     const id = c.req.param("id");
+     try {
++      const pinned = await getPinnedInstance(c);
+       const data = await rpcForConversation("CancelCascadeInvocation", id, {
+         cascadeId: id,
+-      });
++      }, pinned);
+       return c.json(data);
+     } catch (err) {
+       return handleRPCError(c, err);
+@@ -505,12 +544,13 @@ export function registerConversationRoutes(app: Hono): void {
+   app.delete("/api/conversations/:id", async (c) => {
+     const id = c.req.param("id");
+     try {
++      const pinned = await getPinnedInstance(c);
+       return await runConversationMutation(id, async () => {
+         const metadata = await getMetadata(true);
+         const data = await rpcForConversation("DeleteCascadeTrajectory", id, {
+           metadata,
+           cascadeId: id,
+-        });
++        }, pinned);
+         messageTracker.clearConversation(id);
+         return c.json(data);
+       });
+@@ -526,6 +566,7 @@ export function registerConversationRoutes(app: Hono): void {
+   app.post("/api/conversations/:id/file-permission", async (c) => {
+     const id = c.req.param("id");
+     try {
++      const pinned = await getPinnedInstance(c);
+       const body = await c.req.json();
+       const { trajectoryId, stepIndex, allow, scope, absolutePathUri } = body;
+ 
+@@ -561,6 +602,7 @@ export function registerConversationRoutes(app: Hono): void {
+             },
+           },
+         },
++        pinned,
+       );
+ 
+       // Permission approval unblocks subsequent WAITING steps — wake WS polling
+@@ -577,6 +619,7 @@ export function registerConversationRoutes(app: Hono): void {
+   app.post("/api/conversations/:id/command-action", async (c) => {
+     const id = c.req.param("id");
+     try {
++      const pinned = await getPinnedInstance(c);
+       const body = await c.req.json();
+       const { trajectoryId, stepIndex, approved, commandLine } = body;
+ 
+@@ -610,6 +653,7 @@ export function registerConversationRoutes(app: Hono): void {
+             },
+           },
+         },
++        pinned,
+       );
+ 
+       // Command approval/rejection unblocks the agent — wake WS polling
+@@ -624,6 +668,7 @@ export function registerConversationRoutes(app: Hono): void {
+   app.post("/api/conversations/:id/revert", async (c) => {
+     const id = c.req.param("id");
+     try {
++      const pinned = await getPinnedInstance(c);
+       return await runConversationMutation(id, async () => {
+         const body = await c.req.json();
+         const metadata = await getMetadata(true);
+@@ -643,7 +688,7 @@ export function registerConversationRoutes(app: Hono): void {
+           };
+         }
+ 
+-        const data = await rpcForConversation("RevertToCascadeStep", id, req);
++        const data = await rpcForConversation("RevertToCascadeStep", id, req, pinned);
+         messageTracker.clearConversation(id);
+         conversationSignals.emit("activate", id);
+         return c.json(data);
+diff --git a/packages/web/src/App.tsx b/packages/web/src/App.tsx
+index 321952e..72b679c 100644
+--- a/packages/web/src/App.tsx
++++ b/packages/web/src/App.tsx
+@@ -84,6 +84,20 @@ function ChatView() {
+   const isRunning = activeConv?.summary.status === "CASCADE_RUN_STATUS_RUNNING";
+   const connected = !!health && health.languageServers.length > 0;
+ 
++  // Auto-redirect invalid/filtered conversation IDs to prevent broken UI states
++  useEffect(() => {
++    if (loading || conversations.length === 0 || !activeId) return;
++    const exists = conversations.some((c) => c.id === activeId);
++    if (!exists) {
++      const firstWs = workspaces[0];
++      if (firstWs) {
++        navigate(`/${slugFromUri(firstWs.uri)}`, { replace: true });
++      } else {
++        navigate("/unknown", { replace: true });
++      }
++    }
++  }, [loading, conversations, activeId, workspaces, navigate]);
++
+   const {
+     optimisticMessages,
+     setOptimisticMessages,
+@@ -240,6 +254,10 @@ function ChatView() {
+         conversations={conversations}
+         activeId={activeId}
+         onSelect={(id) => {
++          const conv = conversations.find((c) => c.id === id);
++          if (conv && (conv as any).lsPid) {
++            localStorage.setItem("porta:targetPid", String((conv as any).lsPid));
++          }
+           setOptimisticMessages([]);
+           navigate(chatUrl(id));
+           if (isMobile()) setSidebarOpen(false);
+@@ -250,6 +268,7 @@ function ChatView() {
+         connected={connected}
+         isOpen={sidebarOpen}
+         onToggle={() => setSidebarOpen((v) => !v)}
++        languageServers={health?.languageServers}
+       />
+       {/* Mobile backdrop: tap to close sidebar */}
+       {sidebarOpen && (
+diff --git a/packages/web/src/api/client.ts b/packages/web/src/api/client.ts
+index 9bb4c9e..a2ccde2 100644
+--- a/packages/web/src/api/client.ts
++++ b/packages/web/src/api/client.ts
+@@ -7,8 +7,10 @@ function previewBody(text: string): string {
+ }
+ 
+ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
++  const targetPid = localStorage.getItem("porta:targetPid");
+   const headers: Record<string, string> = {
+     "Content-Type": "application/json",
++    ...(targetPid ? { "x-porta-target-pid": targetPid } : {}),
+     ...((options.headers as Record<string, string>) ?? {}),
+   };
+ 
+diff --git a/packages/web/src/components/Sidebar.tsx b/packages/web/src/components/Sidebar.tsx
+index 49c1ada..91f5d62 100644
+--- a/packages/web/src/components/Sidebar.tsx
++++ b/packages/web/src/components/Sidebar.tsx
+@@ -22,6 +22,7 @@ interface Props {
+   connected: boolean;
+   isOpen: boolean;
+   onToggle: () => void;
++  languageServers?: any[];
+ }
+ 
+ interface WorkspaceGroup {
+@@ -119,10 +120,31 @@ export function Sidebar({
+   connected,
+   isOpen,
+   onToggle,
++  languageServers,
+ }: Props) {
+   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+   const [menuOpen, setMenuOpen] = useState<string | null>(null);
++
++  const [targetPid, setTargetPid] = useState<string | null>(() => localStorage.getItem("porta:targetPid"));
++
++  useEffect(() => {
++    setTargetPid(localStorage.getItem("porta:targetPid"));
++  }, [activeId]);
++
++  const handleInstanceChange = (pidStr: string) => {
++    if (pidStr === "auto") {
++      localStorage.removeItem("porta:targetPid");
++      setTargetPid(null);
++    } else {
++      localStorage.setItem("porta:targetPid", pidStr);
++      setTargetPid(pidStr);
++    }
++    // Delay reload slightly to let native mobile dropdown finish closing and prevent viewport recalculation bugs
++    setTimeout(() => {
++      window.location.reload();
++    }, 150);
++  };
+   const [searchOpen, setSearchOpen] = useState(false);
+   const [searchQuery, setSearchQuery] = useState("");
+   const [searchResults, setSearchResults] = useState<
+@@ -375,13 +397,23 @@ export function Sidebar({
+         >
+           Porta
+         </span>
+-        <button
+-          className="sidebar-icon-btn"
+-          onClick={onToggle}
+-          title="Collapse sidebar"
+-        >
+-          <IconMenu size={16} />
+-        </button>
++        <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
++          <button
++            className="sidebar-icon-btn"
++            onClick={() => window.location.reload()}
++            title="Refresh"
++            style={{ fontSize: "14px", cursor: "pointer" }}
++          >
++            🔄
++          </button>
++          <button
++            className="sidebar-icon-btn"
++            onClick={onToggle}
++            title="Collapse sidebar"
++          >
++            <IconMenu size={16} />
++          </button>
++        </div>
+       </div>
+ 
+       {/* Action buttons */}
+@@ -426,6 +458,49 @@ export function Sidebar({
+             </button>
+           </div>
+         </div>
++        {/* Active IDE Selector */}
++        {languageServers && languageServers.length > 0 && (
++          <div className="sidebar-font-size-row" style={{ marginTop: "12px", borderTop: "1px dashed var(--border-color, rgba(255,255,255,0.1))", paddingTop: "12px" }}>
++            <span className="sidebar-action-icon" style={{ fontSize: 13 }}>🖥️</span>
++            <span className="sidebar-action-label" style={{ fontSize: "12px" }}>Active IDE</span>
++            <select
++              value={targetPid ?? "auto"}
++              onChange={(e) => handleInstanceChange(e.target.value)}
++              style={{
++                background: "var(--bg-modifier-accent, #2e2e2e)",
++                color: "var(--text-normal, #efefef)",
++                border: "1px solid var(--border-color, #444)",
++                borderRadius: "4px",
++                padding: "2px 6px",
++                fontSize: "11px",
++                maxWidth: "100px",
++                outline: "none",
++                cursor: "pointer"
++              }}
++            >
++              <option value="auto">Auto (Workspace)</option>
++              {languageServers.map((ls: any) => {
++                const isV2 = ls.executable?.toLowerCase().includes("language_server.exe");
++                const verStr = isV2 ? "2.0" : "IDE";
++                let wsName = "No Project";
++                if (ls.workspaceId) {
++                  const parts = ls.workspaceId.split("_");
++                  wsName = parts[parts.length - 1] || "Project";
++                  try {
++                    wsName = decodeURIComponent(wsName);
++                  } catch {
++                    // fallback
++                  }
++                }
++                return (
++                  <option key={ls.pid} value={String(ls.pid)}>
++                    {`Antigravity ${verStr} (${wsName})`}
++                  </option>
++                );
++              })}
++            </select>
++          </div>
++        )}
+       </div>
+ 
+       {/* Conversation list */}
+diff --git a/packages/web/src/styles/chat.css b/packages/web/src/styles/chat.css
+index 3d4c5d5..bf572e1 100644
+--- a/packages/web/src/styles/chat.css
++++ b/packages/web/src/styles/chat.css
+@@ -5,6 +5,8 @@
+   display: flex;
+   flex-direction: column;
+   min-width: 0;
++  min-height: 0;
++  height: 100%;
+   background: var(--bg-primary);
+ }
+ 
+diff --git a/packages/web/src/styles/responsive.css b/packages/web/src/styles/responsive.css
+index e1dd60e..e123b9b 100644
+--- a/packages/web/src/styles/responsive.css
++++ b/packages/web/src/styles/responsive.css
+@@ -182,11 +182,15 @@
+   .model-selector-btn {
+     width: auto;
+     min-width: 0;
+-    max-width: 140px;
++    max-width: 110px;
+     padding: 5px 8px 5px 10px;
+     font-size: 0.786rem;
+   }
+ 
++  .chat-input-bottom-right {
++    gap: 4px;
++  }
++
+   .chat-input-wrap {
+     padding: 10px 10px 8px;
+     border-radius: var(--radius-md);

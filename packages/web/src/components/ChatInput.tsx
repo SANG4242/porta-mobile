@@ -217,6 +217,12 @@ export function ChatInput({
 
   const inputDisabled = disabled || isPreparingAttachments;
 
+  const handleBlur = () => {
+    setTimeout(() => {
+      window.scrollTo(0, 0);
+    }, 100);
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       // On mobile, Enter inserts a newline — send via button only
@@ -340,6 +346,7 @@ export function ChatInput({
             onChange={handleInput}
             onKeyDown={handleKeyDown}
             onPaste={handlePaste}
+            onBlur={handleBlur}
             rows={1}
             disabled={inputDisabled}
           />
