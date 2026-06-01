@@ -34,7 +34,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^4.0.18
-        version: 4.0.18(@types/node@22.19.13)(happy-dom@20.8.3)(jsdom@28.1.0)(terser@5.46.0)(tsx@4.21.0)
+        version: 4.0.18(@types/node@22.19.13)(happy-dom@20.9.0)(jsdom@28.1.0)(terser@5.46.0)(tsx@4.21.0)
 
   packages/web:
     dependencies:
@@ -97,14 +97,14 @@ importers:
         specifier: ^16.5.0
         version: 16.5.0
       happy-dom:
-        specifier: ^20.8.3
-        version: 20.8.3
+        specifier: ^20.8.9
+        version: 20.9.0
       jsdom:
         specifier: ^28.1.0
         version: 28.1.0
       serialize-javascript:
-        specifier: ^7.0.4
-        version: 7.0.4
+        specifier: ^7.0.5
+        version: 7.0.5
       typescript:
         specifier: ~5.9.3
         version: 5.9.3
@@ -119,7 +119,7 @@ importers:
         version: 1.2.0(vite@7.3.1(@types/node@24.11.0)(terser@5.46.0)(tsx@4.21.0))(workbox-build@7.4.0)(workbox-window@7.4.0)
       vitest:
         specifier: ^4.0.18
-        version: 4.0.18(@types/node@24.11.0)(happy-dom@20.8.3)(jsdom@28.1.0)(terser@5.46.0)(tsx@4.21.0)
+        version: 4.0.18(@types/node@24.11.0)(happy-dom@20.9.0)(jsdom@28.1.0)(terser@5.46.0)(tsx@4.21.0)
 
 packages:
 
@@ -1855,8 +1855,8 @@ packages:
   graceful-fs@4.2.11:
     resolution: {integrity: sha512-RbJ5/jmFcNNCcDV5o9eTnBLJ/HszWV0P73bc+Ff4nS/rJj+YaS6IGyiOL0VoBYX+l1Wrl3k63h/KrH+nhJ0XvQ==}
 
-  happy-dom@20.8.3:
-    resolution: {integrity: sha512-lMHQRRwIPyJ70HV0kkFT7jH/gXzSI7yDkQFe07E2flwmNDFoWUTRMKpW2sglsnpeA7b6S2TJPp98EbQxai8eaQ==}
+  happy-dom@20.9.0:
+    resolution: {integrity: sha512-GZZ9mKe8r646NUAf/zemnGbjYh4Bt8/MqASJY+pSm5ZDtc3YQox+4gsLI7yi1hba6o+eCsGxpHn5+iEVn31/FQ==}
     engines: {node: '>=20.0.0'}
 
   has-bigints@1.1.0:
@@ -2425,8 +2425,8 @@ packages:
   serialize-javascript@6.0.2:
     resolution: {integrity: sha512-Saa1xPByTTq2gdeFZYLLo+RFE35NHZkAbqZeWNd3BpzppeVisAqpDjcp8dyf6uIvEqJRd46jemmyA4iFIeVk8g==}
 
-  serialize-javascript@7.0.4:
-    resolution: {integrity: sha512-DuGdB+Po43Q5Jxwpzt1lhyFSYKryqoNjQSA9M92tyw0lyHIOur+XCalOUe0KTJpyqzT8+fQ5A0Jf7vCx/NKmIg==}
+  serialize-javascript@7.0.5:
+    resolution: {integrity: sha512-F4LcB0UqUl1zErq+1nYEEzSHJnIwb3AF2XWB94b+afhrekOUijwooAYqFyRbjYkm2PAKBabx6oYv/xDxNi8IBw==}
     engines: {node: '>=20.0.0'}
 
   set-cookie-parser@2.7.2:
@@ -4806,7 +4806,7 @@ snapshots:
 
   graceful-fs@4.2.11: {}
 
-  happy-dom@20.8.3:
+  happy-dom@20.9.0:
     dependencies:
       '@types/node': 24.11.0
       '@types/whatwg-mimetype': 3.0.2
@@ -5391,7 +5391,7 @@ snapshots:
     dependencies:
       randombytes: 2.1.0
 
-  serialize-javascript@7.0.4: {}
+  serialize-javascript@7.0.5: {}
 
   set-cookie-parser@2.7.2: {}
 
@@ -5731,7 +5731,7 @@ snapshots:
       terser: 5.46.0
       tsx: 4.21.0
 
-  vitest@4.0.18(@types/node@22.19.13)(happy-dom@20.8.3)(jsdom@28.1.0)(terser@5.46.0)(tsx@4.21.0):
+  vitest@4.0.18(@types/node@22.19.13)(happy-dom@20.9.0)(jsdom@28.1.0)(terser@5.46.0)(tsx@4.21.0):
     dependencies:
       '@vitest/expect': 4.0.18
       '@vitest/mocker': 4.0.18(vite@7.3.1(@types/node@22.19.13)(terser@5.46.0)(tsx@4.21.0))
@@ -5755,7 +5755,7 @@ snapshots:
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@types/node': 22.19.13
-      happy-dom: 20.8.3
+      happy-dom: 20.9.0
       jsdom: 28.1.0
     transitivePeerDependencies:
       - jiti
@@ -5770,7 +5770,7 @@ snapshots:
       - tsx
       - yaml
 
-  vitest@4.0.18(@types/node@24.11.0)(happy-dom@20.8.3)(jsdom@28.1.0)(terser@5.46.0)(tsx@4.21.0):
+  vitest@4.0.18(@types/node@24.11.0)(happy-dom@20.9.0)(jsdom@28.1.0)(terser@5.46.0)(tsx@4.21.0):
     dependencies:
       '@vitest/expect': 4.0.18
       '@vitest/mocker': 4.0.18(vite@7.3.1(@types/node@24.11.0)(terser@5.46.0)(tsx@4.21.0))
@@ -5794,7 +5794,7 @@ snapshots:
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@types/node': 24.11.0
-      happy-dom: 20.8.3
+      happy-dom: 20.9.0
       jsdom: 28.1.0
     transitivePeerDependencies:
       - jiti

@@ -2,6 +2,10 @@
 
 **English** | [中文](README_CN.md)
 
+[![CI](https://github.com/L1M80/porta/actions/workflows/ci.yml/badge.svg)](https://github.com/L1M80/porta/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+![Version](https://img.shields.io/badge/version-0.6.0-green)
+
 Enhanced mobile interface for [Antigravity](https://antigravity.google/) — access your local Antigravity sessions from your phone or tablet through a lightweight LSP bridge.
 
 Based on [porta](https://github.com/L1M80/porta) by L1M80 (MIT License), with improvements focused on real-world usability, mobile experience, and CJK language support.
@@ -108,6 +112,153 @@ Porta doesn't stream pixels or run your workspace in the cloud. It relays struct
 This project is based on [porta](https://github.com/L1M80/porta) by [L1M80](https://github.com/L1M80), licensed under the [MIT License](LICENSE).
 
 Thanks to the [LINUX DO](https://linux.do/) community for support and feedback.
+
+## Remote access with Cloudflare
+
+```mermaid
+flowchart LR
+  Browser
+
+  subgraph CF ["Cloudflare (optional)"]
+    Pages["Pages(static SPA)"]
+    Tunnel
+    ZT["Zero Trust"]
+  end
+
+  subgraph Local ["Your machine"]
+    Proxy["Proxy(:3170)"]
+    LS["Antigravity LS"]
+  end
+
+  Browser -- HTTPS --> Pages --> ZT --> Tunnel --> Proxy --> LS
+  Browser -. local .-> Proxy
+```
+
+- **Local-only mode** (Quick start above): Browser → Proxy → LS. No cloud services needed.
+- **Remote mode**: Cloudflare Pages + Tunnel + Zero Trust for secure remote access without exposing your network.
+
+Cloudflare can be used in two different ways:
+
+### Option A: Quick Tunnel (temporary testing)
+
+If you only want to try Porta remotely and do not need a stable hostname, use a
+Cloudflare Quick Tunnel.
+
+- No custom domain required
+- Best for demos and short-lived testing
+- Not recommended for ongoing use: the hostname is temporary, and Cloudflare documents Quick Tunnels as testing-only infrastructure
+
+To avoid stale copy-pasted instructions, follow Cloudflare's current docs:
+
+- [Quick Tunnels](https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/do-more-with-tunnels/trycloudflare/)
+- [Cloudflare Tunnel setup](https://developers.cloudflare.com/tunnel/setup/)
+
+Use a named tunnel instead if you want a stable `VITE_API_BASE`, a fixed Cloudflare
+Pages deployment, or long-lived remote access.
+
+### Option B: Named tunnel + Pages (recommended for regular remote use)
+
+This is the stable pattern for ongoing remote access. It requires:
+
+- A **Cloudflare** account
+- **Cloudflare Tunnel** (`cloudflared`) installed and authenticated
+- A **Cloudflare Pages** project (for hosting the static SPA)
+- A domain managed by **Cloudflare** for the tunnel hostname
+- Optionally, **Cloudflare Zero Trust** for authentication
+
+### 1. Configure `.env`
+
+Set the proxy runtime and Cloudflare-related variables in `.env`:
+
+```bash
+# .env
+PORTA_CORS_ORIGINS=https://<YOUR_PAGES_DOMAIN>
+PORTA_TUNNEL_NAME=<YOUR_TUNNEL_NAME>
+PORTA_CF_PROJECT=<YOUR_PROJECT_NAME>
+```
+
+### 2. Create the named tunnel
+
+Point the tunnel at your local proxy:
+
+```bash
+cloudflared tunnel create <YOUR_TUNNEL_NAME>
+cloudflared tunnel route dns <YOUR_TUNNEL_NAME> <YOUR_API_SUBDOMAIN>
+```
+
+### 3. Create `.env.production`
+
+Create `.env.production` in the repo root for the web build:
+
+```bash
+# .env.production
+VITE_API_BASE=https://<YOUR_API_SUBDOMAIN>
+```
+
+### 4. Build and deploy the SPA
+
+```bash
+pnpm deploy
+```
+
+This uses `PORTA_CF_PROJECT` from `.env`. If you prefer, you can run the
+equivalent `wrangler pages deploy` command manually.
+
+### 5. Start the proxy + named tunnel
+
+```bash
+pnpm dev:cloud
+```
+
+This reads `PORTA_TUNNEL_NAME` from `.env` and starts the proxy and
+`cloudflared tunnel run` together.
+
+### 6. Securing your API with Cloudflare Access (Zero Trust)
+
+Exposing your local API to the public internet can be dangerous. To completely lock down your setup, you should protect **both** your frontend and your API using Cloudflare Access. 
+
+Porta's built-in Edge Proxy securely bridges the two by injecting Machine-to-Machine authentication tokens, completely hiding your backend from the internet.
+
+To set this up, follow these precise steps:
+
+**1. Create Two Separate Applications**
+In your **Cloudflare Zero Trust** dashboard, under **Access > Applications**, you must create **two** distinct applications:
+- **Frontend App**: Protects your Pages deployment (e.g., `https://<YOUR_PAGES_DOMAIN>`). Configure this with standard user login policies (e.g., email OTP).
+- **Backend API App**: Protects your Tunnel (e.g., `https://<YOUR_API_SUBDOMAIN>`). 
+
+**2. Generate Service Tokens**
+1. Navigate to **Access > Service Auth**.
+2. Create a new Service Token for Porta. This will generate a **Client ID** and **Client Secret**.
+
+**3. Add the Service Auth Policy to the Backend API**
+1. Open the **Backend API App** you created in Step 1.
+2. Go to the **Policies** tab and add a new policy.
+3. Set the action to **Service Auth**.
+4. In the rules, configure it to **Include > Service Token** and select the token you just created.
+
+**4. Configure Cloudflare Pages Environment Variables**
+1. Go to your **Cloudflare Pages** dashboard for `<YOUR_PROJECT_NAME>`.
+2. Under **Settings > Environment variables**, add the following **three** variables to **both Production and Preview** environments:
+   - `PORTA_API_BASE`: Set this to your exact API URL (e.g., `https://<YOUR_API_SUBDOMAIN>`).
+   - `CF_ACCESS_CLIENT_ID`: The Client ID from Step 2.
+   - `CF_ACCESS_CLIENT_SECRET`: The Client Secret from Step 2.
+
+**5. Route Frontend Traffic Through the Proxy**
+By default, the Porta frontend tries to fetch the API directly. To force it to use the secure Edge Proxy:
+1. In your `.env.production` file, **remove or comment out** `VITE_API_BASE`. 
+2. Without `VITE_API_BASE`, the frontend falls back to relative paths (`/api/*`), routing traffic through the Cloudflare Pages Edge proxy.
+3. Run `pnpm deploy` again.
+
+> **Backwards Compatibility Note:** If `VITE_API_BASE` is defined, the frontend will bypass the proxy entirely and attempt to communicate directly with the backend. This is fully supported and recommended for local development (LAN access) or deployments where the backend is not protected by Cloudflare Access. Additionally, the proxy will gracefully skip Service Token injection if the `CF_ACCESS_CLIENT_ID` environment variables are missing.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development workflow, branch
+strategy, and PR guidelines.
+
+## Security
+
+To report a vulnerability, see [SECURITY.md](SECURITY.md).
 
 ## License
 

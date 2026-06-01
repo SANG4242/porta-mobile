@@ -10,6 +10,7 @@ import {
   IconMore,
   IconX,
   IconSpinner,
+  IconGear,
 } from "./Icons";
 
 interface Props {
@@ -18,6 +19,7 @@ interface Props {
   onSelect: (id: string) => void;
   onNew: () => void;
   onDelete: (id: string) => void;
+  onSettings: () => void;
   loading: boolean;
   connected: boolean;
   isOpen: boolean;
@@ -116,6 +118,7 @@ export function Sidebar({
   onSelect,
   onNew,
   onDelete,
+  onSettings,
   loading,
   connected,
   isOpen,
@@ -233,6 +236,7 @@ export function Sidebar({
         setTimeout(() => searchInputRef.current?.focus(), 50);
       },
     },
+    { icon: <IconGear size={14} />, label: "Settings", onClick: onSettings },
     {
       icon: <span className="theme-indicator">{themeIcon}</span>,
       label: "Theme",
