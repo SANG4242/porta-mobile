@@ -182,9 +182,13 @@
   .model-selector-btn {
     width: auto;
     min-width: 0;
-    max-width: 140px;
+    max-width: 110px;
     padding: 5px 8px 5px 10px;
     font-size: 0.786rem;
+  }
+
+  .chat-input-bottom-right {
+    gap: 4px;
   }
 
   .chat-input-wrap {
