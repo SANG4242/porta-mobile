@@ -22,6 +22,7 @@ interface Props {
   connected: boolean;
   isOpen: boolean;
   onToggle: () => void;
+  languageServers?: any[];
 }
 
 interface WorkspaceGroup {
@@ -119,10 +120,24 @@ export function Sidebar({
   connected,
   isOpen,
   onToggle,
+  languageServers,
 }: Props) {
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [menuOpen, setMenuOpen] = useState<string | null>(null);
+
+  const [targetPid, setTargetPid] = useState<string | null>(() => localStorage.getItem("porta:targetPid"));
+
+  const handleInstanceChange = (pidStr: string) => {
+    if (pidStr === "auto") {
+      localStorage.removeItem("porta:targetPid");
+      setTargetPid(null);
+    } else {
+      localStorage.setItem("porta:targetPid", pidStr);
+      setTargetPid(pidStr);
+    }
+    window.location.reload();
+  };
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<
@@ -426,6 +441,49 @@ export function Sidebar({
             </button>
           </div>
         </div>
+        {/* Active IDE Selector */}
+        {languageServers && languageServers.length > 0 && (
+          <div className="sidebar-font-size-row" style={{ marginTop: "12px", borderTop: "1px dashed var(--border-color, rgba(255,255,255,0.1))", paddingTop: "12px" }}>
+            <span className="sidebar-action-icon" style={{ fontSize: 13 }}>🖥️</span>
+            <span className="sidebar-action-label" style={{ fontSize: "12px" }}>Active IDE</span>
+            <select
+              value={targetPid ?? "auto"}
+              onChange={(e) => handleInstanceChange(e.target.value)}
+              style={{
+                background: "var(--bg-modifier-accent, #2e2e2e)",
+                color: "var(--text-normal, #efefef)",
+                border: "1px solid var(--border-color, #444)",
+                borderRadius: "4px",
+                padding: "2px 6px",
+                fontSize: "11px",
+                maxWidth: "100px",
+                outline: "none",
+                cursor: "pointer"
+              }}
+            >
+              <option value="auto">Auto (Workspace)</option>
+              {languageServers.map((ls: any) => {
+                const isV2 = ls.executable?.toLowerCase().includes("language_server.exe");
+                const verStr = isV2 ? "2.0" : "IDE";
+                let wsName = "No Project";
+                if (ls.workspaceId) {
+                  const parts = ls.workspaceId.split("_");
+                  wsName = parts[parts.length - 1] || "Project";
+                  try {
+                    wsName = decodeURIComponent(wsName);
+                  } catch {
+                    // fallback
+                  }
+                }
+                return (
+                  <option key={ls.pid} value={String(ls.pid)}>
+                    {`Antigravity ${verStr} (${wsName})`}
+                  </option>
+                );
+              })}
+            </select>
+          </div>
+        )}
       </div>
 
       {/* Conversation list */}

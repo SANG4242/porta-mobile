@@ -31,6 +31,7 @@ export interface LSInstance {
   workspaceId?: string;
   /** Derived from discovery source */
   source: "daemon" | "process";
+  executable?: string;
 }
 
 const DAEMON_DIR = join(homedir(), ".gemini", "antigravity", "daemon");
@@ -84,6 +85,7 @@ async function discoverFromProcess(): Promise<LSInstance[]> {
       httpsPort: number;
       httpPort: number;
       lspPort: number;
+      executable?: string;
     }> = [];
 
     for (const candidate of candidates) {
@@ -98,6 +100,7 @@ async function discoverFromProcess(): Promise<LSInstance[]> {
           csrfToken: candidate.csrfToken,
           workspaceId: candidate.workspaceId,
           source: "process",
+          executable: candidate.executable,
         });
       } else {
         pendingInstances.push({
@@ -107,6 +110,7 @@ async function discoverFromProcess(): Promise<LSInstance[]> {
           httpsPort: 0,
           httpPort: candidate.httpPort,
           lspPort: candidate.lspPort,
+          executable: candidate.executable,
         });
       }
     }
@@ -133,6 +137,7 @@ async function discoverFromProcess(): Promise<LSInstance[]> {
             csrfToken: pending.csrfToken,
             workspaceId: pending.workspaceId,
             source: "process",
+            executable: pending.executable,
           });
         }),
       );

@@ -5,6 +5,7 @@ export interface ProcessDiscoveryCandidate {
   httpsPort: number;
   httpPort: number;
   lspPort: number;
+  executable?: string;
 }
 
 export interface PlatformAdapter {

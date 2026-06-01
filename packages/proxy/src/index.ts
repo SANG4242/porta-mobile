@@ -54,6 +54,7 @@ app.get("/api/health", async (c) => {
       httpsPort: i.httpsPort,
       workspaceId: i.workspaceId,
       source: i.source,
+      executable: i.executable,
     })),
   });
 });

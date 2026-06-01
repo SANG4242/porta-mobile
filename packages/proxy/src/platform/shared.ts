@@ -74,6 +74,7 @@ export function parseCommandCandidate(
   return {
     pid,
     csrfToken,
+    executable,
     workspaceId: parseArgValue(args, "--workspace_id"),
     httpsPort: parsePort(args, "--server_port"),
     httpPort: parsePort(args, "--extension_server_port"),

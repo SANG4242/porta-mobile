@@ -7,8 +7,10 @@ function previewBody(text: string): string {
 }
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const targetPid = localStorage.getItem("porta:targetPid");
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
+    ...(targetPid ? { "x-porta-target-pid": targetPid } : {}),
     ...((options.headers as Record<string, string>) ?? {}),
   };
 

@@ -250,6 +250,7 @@ function ChatView() {
         connected={connected}
         isOpen={sidebarOpen}
         onToggle={() => setSidebarOpen((v) => !v)}
+        languageServers={health?.languageServers}
       />
       {/* Mobile backdrop: tap to close sidebar */}
       {sidebarOpen && (

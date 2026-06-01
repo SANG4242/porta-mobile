@@ -109,6 +109,15 @@ function warmUpDiskConversations(
 
 
 export function registerConversationRoutes(app: Hono): void {
+  async function getPinnedInstance(c: any): Promise<LSInstance | undefined> {
+    const pidHeader = c.req.header("x-porta-target-pid");
+    if (!pidHeader) return undefined;
+    const pid = parseInt(pidHeader, 10);
+    if (Number.isNaN(pid)) return undefined;
+    const instances = await discovery.getInstances();
+    return instances.find((i) => i.pid === pid);
+  }
+
   app.get("/api/conversations", async (c) => {
     try {
       const instances = await discovery.getInstances();
@@ -227,9 +236,10 @@ export function registerConversationRoutes(app: Hono): void {
   app.get("/api/conversations/:id", async (c) => {
     const id = c.req.param("id");
     try {
+      const pinned = await getPinnedInstance(c);
       const data = await rpcForConversation("GetCascadeTrajectory", id, {
         cascadeId: id,
-      }, undefined, true);
+      }, pinned, true);
       return c.json(data);
     } catch (err) {
       return handleRPCError(c, err);
@@ -244,16 +254,17 @@ export function registerConversationRoutes(app: Hono): void {
       : undefined;
 
     try {
+      const pinned = await getPinnedInstance(c);
       let resolvedOffset = offset;
       let stepCount: number | undefined;
-      let pinnedInstance: LSInstance | undefined;
+      let pinnedInstance: LSInstance | undefined = pinned;
       let stepsArray: unknown[] = [];
 
       if (c.req.query("tail")) {
         // readOnly=true: this endpoint only reads steps; the pinned instance
         // is NOT reused for mutations, so try-all fallback is safe and
         // necessary for disk-only conversations that no LS has in memory yet.
-        const sc = await getStepCount(id, undefined, true);
+        const sc = await getStepCount(id, pinned, true);
         pinnedInstance = sc.instance;
         if (sc.count > 0) {
           stepCount = sc.count;
@@ -304,7 +315,7 @@ export function registerConversationRoutes(app: Hono): void {
           } else if (isRecoverableStepError(fetchErr)) {
             // Corrupted batch (e.g. invalid UTF-8) — binary search forward
             if (stepCount === undefined) {
-              const sc = await getStepCount(id, undefined, true);
+              const sc = await getStepCount(id, pinned, true);
               stepCount = sc.count;
               pinnedInstance ??= sc.instance;
             }
@@ -353,41 +364,43 @@ export function registerConversationRoutes(app: Hono): void {
 
       let workspaceUri: string | undefined = body.workspaceFolderAbsoluteUri;
 
-      // Resolve which LS instance to use based on workspace URI
-      let targetInstance: LSInstance | undefined;
-      if (workspaceUri) {
-        const wsId = normalizeWorkspaceId(uriToWorkspaceId(workspaceUri));
-        const instances = await discovery.getInstances();
-        targetInstance =
-          instances.find(
-            (i) => i.workspaceId && normalizeWorkspaceId(i.workspaceId) === wsId,
-          ) ?? undefined;
+      // Resolve which LS instance to use based on target PID or workspace URI
+      let targetInstance = await getPinnedInstance(c);
+      if (!targetInstance) {
+        if (workspaceUri) {
+          const wsId = normalizeWorkspaceId(uriToWorkspaceId(workspaceUri));
+          const instances = await discovery.getInstances();
+          targetInstance =
+            instances.find(
+              (i) => i.workspaceId && normalizeWorkspaceId(i.workspaceId) === wsId,
+            ) ?? undefined;
 
-        // Workspace was explicitly requested but no LS owns it — fail clearly
-        if (!targetInstance) {
-          return c.json(
-            {
-              error:
-                "No Language Server found for this workspace. Open the project in Antigravity first.",
-              detail: workspaceUri,
-            },
-            503,
-          );
-        }
-      } else {
-        // No workspace specified — pick first available LS and auto-inject
-        targetInstance = (await discovery.getInstance()) ?? undefined;
-        try {
-          const wsInfos = (await rpc.call(
-            "GetWorkspaceInfos",
-            {},
-            targetInstance,
-          )) as {
-            workspaceInfos?: { workspaceUri: string }[];
-          };
-          workspaceUri = wsInfos.workspaceInfos?.[0]?.workspaceUri;
-        } catch {
-          // best-effort — proceed without workspace
+          // Workspace was explicitly requested but no LS owns it — fail clearly
+          if (!targetInstance) {
+            return c.json(
+              {
+                error:
+                  "No Language Server found for this workspace. Open the project in Antigravity first.",
+                detail: workspaceUri,
+              },
+              503,
+            );
+          }
+        } else {
+          // No workspace specified — pick first available LS and auto-inject
+          targetInstance = (await discovery.getInstance()) ?? undefined;
+          try {
+            const wsInfos = (await rpc.call(
+              "GetWorkspaceInfos",
+              {},
+              targetInstance,
+            )) as {
+              workspaceInfos?: { workspaceUri: string }[];
+            };
+            workspaceUri = wsInfos.workspaceInfos?.[0]?.workspaceUri;
+          } catch {
+            // best-effort — proceed without workspace
+          }
         }
       }
 
@@ -397,6 +410,7 @@ export function registerConversationRoutes(app: Hono): void {
           ...body,
           metadata,
           ...(workspaceUri ? { workspaceFolderAbsoluteUri: workspaceUri } : {}),
+          trajectorySource: "CORTEX_TRAJECTORY_SOURCE_INTERACTIVE_CASCADE",
         },
         targetInstance,
       );
@@ -437,16 +451,18 @@ export function registerConversationRoutes(app: Hono): void {
   app.post("/api/conversations/:id/messages", async (c) => {
     const id = c.req.param("id");
     try {
+      const pinned = await getPinnedInstance(c);
       return await runConversationMutation(id, async () => {
         const body = await c.req.json();
         const { items, model, media, plannerType, clientMessageId } = body;
         const metadata = await getMetadata(!!body.fileAccessGranted);
-        const { count: preSendStepCount, instance } = await getStepCount(id);
+        const { count: preSendStepCount, instance } = await getStepCount(id, pinned);
 
         const req: Record<string, unknown> = {
           metadata,
           cascadeId: id,
           items,
+          trajectorySource: "CORTEX_TRAJECTORY_SOURCE_INTERACTIVE_CASCADE",
         };
 
         if (media && Array.isArray(media) && media.length > 0) {
@@ -469,7 +485,7 @@ export function registerConversationRoutes(app: Hono): void {
           "SendUserCascadeMessage",
           id,
           req,
-          instance,
+          pinned ?? instance,
         );
         if (typeof clientMessageId === "string" && clientMessageId.length > 0) {
           messageTracker.trackPendingMessage(
@@ -491,9 +507,10 @@ export function registerConversationRoutes(app: Hono): void {
   app.post("/api/conversations/:id/stop", async (c) => {
     const id = c.req.param("id");
     try {
+      const pinned = await getPinnedInstance(c);
       const data = await rpcForConversation("CancelCascadeInvocation", id, {
         cascadeId: id,
-      });
+      }, pinned);
       return c.json(data);
     } catch (err) {
       return handleRPCError(c, err);
@@ -505,12 +522,13 @@ export function registerConversationRoutes(app: Hono): void {
   app.delete("/api/conversations/:id", async (c) => {
     const id = c.req.param("id");
     try {
+      const pinned = await getPinnedInstance(c);
       return await runConversationMutation(id, async () => {
         const metadata = await getMetadata(true);
         const data = await rpcForConversation("DeleteCascadeTrajectory", id, {
           metadata,
           cascadeId: id,
-        });
+        }, pinned);
         messageTracker.clearConversation(id);
         return c.json(data);
       });
@@ -526,6 +544,7 @@ export function registerConversationRoutes(app: Hono): void {
   app.post("/api/conversations/:id/file-permission", async (c) => {
     const id = c.req.param("id");
     try {
+      const pinned = await getPinnedInstance(c);
       const body = await c.req.json();
       const { trajectoryId, stepIndex, allow, scope, absolutePathUri } = body;
 
@@ -561,6 +580,7 @@ export function registerConversationRoutes(app: Hono): void {
             },
           },
         },
+        pinned,
       );
 
       // Permission approval unblocks subsequent WAITING steps — wake WS polling
@@ -577,6 +597,7 @@ export function registerConversationRoutes(app: Hono): void {
   app.post("/api/conversations/:id/command-action", async (c) => {
     const id = c.req.param("id");
     try {
+      const pinned = await getPinnedInstance(c);
       const body = await c.req.json();
       const { trajectoryId, stepIndex, approved, commandLine } = body;
 
@@ -610,6 +631,7 @@ export function registerConversationRoutes(app: Hono): void {
             },
           },
         },
+        pinned,
       );
 
       // Command approval/rejection unblocks the agent — wake WS polling
@@ -624,6 +646,7 @@ export function registerConversationRoutes(app: Hono): void {
   app.post("/api/conversations/:id/revert", async (c) => {
     const id = c.req.param("id");
     try {
+      const pinned = await getPinnedInstance(c);
       return await runConversationMutation(id, async () => {
         const body = await c.req.json();
         const metadata = await getMetadata(true);
@@ -643,7 +666,7 @@ export function registerConversationRoutes(app: Hono): void {
           };
         }
 
-        const data = await rpcForConversation("RevertToCascadeStep", id, req);
+        const data = await rpcForConversation("RevertToCascadeStep", id, req, pinned);
         messageTracker.clearConversation(id);
         conversationSignals.emit("activate", id);
         return c.json(data);
